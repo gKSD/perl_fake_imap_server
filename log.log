@@ -1,0 +1,41 @@
+2014/10/07-19:42:40 MyServer (type Net::Server::Fork) starting! pid(11943)
+Using default listen value of 128
+Binding to TCP port 993 on host 127.0.0.1
+2014/10/07-19:42:40 Can't connect to TCP port 993 on 127.0.0.1 [%D0%9E%D1%82%D0%BA%D0%B0%D0%B7%D0%B0%D0%BD%D0%BE %D0%B2 %D0%B4%D0%BE%D1%81%D1%82%D1%83%D0%BF%D0%B5]
+  at line 92 in file /usr/share/perl5/Net/Server/Proto/TCP.pm
+2014/10/07-19:42:40 Server closing!
+2014/10/07-19:42:45 MyServer (type Net::Server::Fork) starting! pid(11945)
+Using default listen value of 128
+Binding to TCP port 993 on host 127.0.0.1
+2014/10/07-19:42:45 Can't connect to TCP port 993 on 127.0.0.1 [%D0%9E%D1%82%D0%BA%D0%B0%D0%B7%D0%B0%D0%BD%D0%BE %D0%B2 %D0%B4%D0%BE%D1%81%D1%82%D1%83%D0%BF%D0%B5]
+  at line 92 in file /usr/share/perl5/Net/Server/Proto/TCP.pm
+2014/10/07-19:42:45 Server closing!
+2014/10/07-19:46:07 MyServer (type Net::Server::Fork) starting! pid(12117)
+Using default listen value of 128
+Binding to TCP port 993 on host 127.0.0.1
+2014/10/07-19:46:07 Can't connect to TCP port 993 on 127.0.0.1 [%D0%9E%D1%82%D0%BA%D0%B0%D0%B7%D0%B0%D0%BD%D0%BE %D0%B2 %D0%B4%D0%BE%D1%81%D1%82%D1%83%D0%BF%D0%B5]
+  at line 92 in file /usr/share/perl5/Net/Server/Proto/TCP.pm
+2014/10/07-19:46:07 Server closing!
+2014/10/07-19:46:36 MyServer (type Net::Server::Fork) starting! pid(12141)
+Using default listen value of 128
+Binding to TCP port 8899 on host localhost
+Group Not Defined.  Defaulting to EGID '1000 4 24 27 30 46 109 124 999 1000 1001'
+2014/10/07-19:47:11 Pid_file already exists for running process (12141)... aborting
+
+  at line 278 in file /usr/share/perl5/Net/Server.pm
+2014/10/07-19:47:11 Server closing!
+2014/10/07-19:47:27 CONNECT TCP Peer: "127.0.0.1:41605" Local: "127.0.0.1:8899"
+2014/10/07-19:48:48 CONNECT TCP Peer: "127.0.0.1:41614" Local: "127.0.0.1:8899"
+2014/10/07-19:49:22 Server closing!
+2014/10/08-18:00:17 MyServer (type Net::Server::Fork) starting! pid(5287)
+Using default listen value of 128
+Binding to TCP port 8899 on host localhost
+Group Not Defined.  Defaulting to EGID '1000 4 24 27 30 46 109 124 999 1000 1001'
+2014/10/08-18:00:25 CONNECT TCP Peer: "127.0.0.1:53989" Local: "127.0.0.1:8899"
+2014/10/08-18:00:40 Server closing!
+2014/10/08-18:00:57 MyServer (type Net::Server::Fork) starting! pid(5372)
+Using default listen value of 128
+Binding to TCP port 8899 on host localhost
+Group Not Defined.  Defaulting to EGID '1000 4 24 27 30 46 109 124 999 1000 1001'
+2014/10/08-18:01:00 CONNECT TCP Peer: "127.0.0.1:53995" Local: "127.0.0.1:8899"
+2014/10/08-18:01:16 Server closing!
