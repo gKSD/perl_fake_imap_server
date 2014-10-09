@@ -22,6 +22,7 @@ sub new {
     my $args  = @_ == 1 ? shift : {@_};
     
     $self->{client} = undef;
+    $self->{my_commandline} = undef;
     
     print "Args: ".Dumper($args);
     
@@ -83,15 +84,33 @@ sub process_request
 }
 
 sub get_commandline()
-{}
+{
+    my $self = shift;
+    my $prop = $self->{server};
+
+    ### see if we can find the full command line
+    if (open _CMDLINE, "/proc/$$/cmdline") { # unix specific
+        my $line = do { local $/ = undef; <_CMDLINE> };
+        close _CMDLINE;
+        if ($line =~ /^(.+)$/) { # need to untaint to allow for later hup
+            return [split /\0/, $1];
+        }
+    }
+
+    my $script = $0;
+    $script = $ENV{'PWD'} .'/'. $script if $script =~ m|^[^/]+/| && $ENV{'PWD'}; # add absolute to relative
+    $script =~ /^(.+)$/; # untaint for later use in hup
+    return [ $1, @ARGV ]
+}
 
 sub commandline
 {
     my $self = shift;
     if(@_)
     {
-        $self->{server}
+        $self->{my_commandline} = ref($_[0]) ? shift : \@_;
     }
+    return $self->{my_commandline} || die "commandline was not set during initialization";
 }
 
 # $self->process_args( \@ARGV, $template ) if defined @ARGV;
