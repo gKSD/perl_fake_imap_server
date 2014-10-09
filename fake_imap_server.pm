@@ -9,6 +9,8 @@ use IO::Socket;
 use strict;
 use warnings;
 
+use Data::Dumper;
+
 #TODO: сделать демона из этого!!!!!!!!!!!!
 
 #my $config;
@@ -17,25 +19,28 @@ sub new {
     my $proto = shift;
     my $class = ref($proto) || $proto;
     my $self = {};
-    $self->{client} = undef;
     my $args  = @_ == 1 ? shift : {@_};
-    use Data::Dumper;
-    print Dumper($args);
+    
+    $self->{client} = undef;
+    
+    print "Args: ".Dumper($args);
+    
     $self->{init_params} = $args;
-    $self->{server} = IO::Socket::INET->new
-    (  
+    $self->{server} = IO::Socket::INET->new(  
         LocalAddr    => 'localhost',
         LocalPort    => 8899,
         Type         => SOCK_STREAM,
         ReuseAddr    => 1,
         Listen       => 5
     ) or die "could not open port\n";
+
     bless $self, $class;
-    use Data::Dumper;
-    print Dumper($self->{init_params}->{aaaa});
+    print "Init_params: ".Dumper($self->{init_params}->{aaaa});
+
+    warn "Fake imap server is listening $port port\n";
+
     return $self;
 }
-#warn "Fake imap server is listening $port port\n";
 
 sub run {
     my $self = shift;
@@ -54,12 +59,12 @@ sub run {
         {
             $self->{client}->autoflush(1);    # Always a good idea 
             close $self->{server};
-            $self->do_your_stuff();
+            $self->process_request();
         }
     }
 }
 
-sub do_your_stuff
+sub process_request
 {
     my $self = shift;
     my $client = $self->{client};
