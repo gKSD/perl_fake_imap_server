@@ -18,8 +18,12 @@ sub new {
     my $class = ref($proto) || $proto;
     my $self = {};
     $self->{client} = undef;
+    my $args  = @_ == 1 ? shift : {@_};
+    use Data::Dumper;
+    print Dumper($args);
+    $self->{init_params} = $args;
     $self->{server} = IO::Socket::INET->new
-    (
+    (  
         LocalAddr    => 'localhost',
         LocalPort    => 8899,
         Type         => SOCK_STREAM,
@@ -27,6 +31,8 @@ sub new {
         Listen       => 5
     ) or die "could not open port\n";
     bless $self, $class;
+    use Data::Dumper;
+    print Dumper($self->{init_params}->{aaaa});
     return $self;
 }
 #warn "server ready waiting for connections.....  \n";
