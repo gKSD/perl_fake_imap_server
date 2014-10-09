@@ -1,9 +1,9 @@
-#!/usr/bin/perl
+#!/usr/bin/perl -I/home/sofia/mailru/perl_fake_imap_server
 
-package Net::Server::FakeImapServer;
+use FakeImapServer;
 
-our $fake_imap_server = Net::Server::FakeImapServer->new(conf_file => 'config.conf');
+our $fake_imap_server = FakeImapServer->new(conf_file => 'config.conf');
 
-$server->run();
+$fake_imap_server->run();
 
 1;
