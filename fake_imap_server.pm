@@ -23,13 +23,13 @@ sub new {
         LocalAddr    => 'localhost',
         LocalPort    => 8899,
         Type         => SOCK_STREAM,
-        Reuse        => 1,
+        ReuseAddr    => 1,
         Listen       => 5
     ) or die "could not open port\n";
     bless $self, $class;
     return $self;
 }
-#warn "server ready waiting for connections.....  \n";
+#warn "Fake imap server is listening $port port\n";
 
 sub run {
     my $self = shift;
@@ -69,6 +69,18 @@ sub do_your_stuff
         print $client "pid $$ > ", $line;
     }
     exit 0;
+}
+
+sub get_commandline()
+{}
+
+sub commandline
+{
+    my $self = shift;
+    if(@_)
+    {
+        $self->{server}
+    }
 }
 
 # $self->process_args( \@ARGV, $template ) if defined @ARGV;
