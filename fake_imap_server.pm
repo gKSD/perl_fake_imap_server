@@ -56,13 +56,15 @@ sub run {
 sub do_your_stuff
 {
     my $self = shift;
+    my $client = $self->{client};
     warn "client connected to pid $$\n";
     use Data::Dumper;
     print Dumper($self);
-    while(my $line = < $self->{client} >)
+    while(my $line = < $client >)
     {
-        print $self->{client}  $line;
-        print $self->{client}  "pid $$ > ", $line;
+        print {$client} "sf";
+       # print $self->{client}  $line;
+       # print $self->{client}  "pid $$ > ", $line;
     }
     exit 0;
 }
