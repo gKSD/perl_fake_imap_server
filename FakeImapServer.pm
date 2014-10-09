@@ -26,6 +26,7 @@ sub notagged_send
     print "* $str\r\n";
 }
 
+
 sub process_request
 {
     #...code...
@@ -62,6 +63,6 @@ sub process_request
     sleep(1000);
 }
 
-#MyServer->run(conf_file => 'config.conf');
+#FakeImapServer->run(conf_file => 'config.conf');
 
 1;
