@@ -10,18 +10,35 @@ use warnings;
 
 #TODO: сделать демона из этого!!!!!!!!!!!!
 
-my $config;
+my $config_args;
+
+=begin
+sub initialize
+{
+    my $self = shift;
+    $self->commandline($self->get_commandline) if ! eval {$self->commandline};
+
+    $config_args = undef;
+
+    $self->configure(@_);
+}
+
+sub configure
+{
+
+}
+=cut
 
 my $server = IO::Socket::INET->new
 (
     LocalAddr    => 'localhost',
     LocalPort    => 8899,
     Type         => SOCK_STREAM,
-    Reuse        => 1,
+    ReuseAddr    => 1,
     Listen       => 5
 ) or die "could not open port\n";
 
-warn "server ready waiting for connections.....  \n";
+warn "Fake imap server is listening $port port\n";
 
 my $client;
 
