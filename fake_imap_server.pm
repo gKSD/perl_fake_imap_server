@@ -30,7 +30,21 @@ print Dumper(@ARGV);
 
 if(defined $argument) {
     if ($argument eq 'run') {
-        $argument = shift @ARGV;
+        my %data;
+        while (defined ($argument = shift @ARGV))
+        {
+            $_ = $argument;
+            if (m/(\w+)=(\w+)/) {
+                print "hello user\n";
+
+                my @fields = $argument =~ /((\w+)=(\w+))/g;
+                print '@fileds: '.Dumper(@fields);
+                $data{$fields[1]} = $fields[2];
+            }
+
+        }
+        print 'Hashmap: '.Dumper(%data);
+        print $data{'port'};
         my $server = fake_imap_server->new();
         $server->run();
     } elsif ($argument eq '-h' or $argument eq '--help') {
@@ -92,6 +106,7 @@ sub init
 
 sub run {
     my $self = shift;
+
     while ($self->{client} = $self->{server}->accept())
     {
         my $pid;
