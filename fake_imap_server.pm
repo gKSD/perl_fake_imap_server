@@ -33,19 +33,17 @@ if(defined $argument) {
         my %data;
         while (defined ($argument = shift @ARGV))
         {
-            $_ = $argument;
-            if (m/(\w+)=(\w+)/) {
-                print "hello user\n";
-
-                my @fields = $argument =~ /((\w+)=(\w+))/g;
-                print '@fileds: '.Dumper(@fields);
-                $data{$fields[1]} = $fields[2];
+            if (my @fields = $argument =~ /--(\w+)=(\w+)/g) {
+                $data{$fields[0]} = $fields[1];
+            }
+            else
+            {
+                die "unrecognized param found (It should be like: --param=param_value)\n";
             }
 
         }
         print 'Hashmap: '.Dumper(%data);
-        print $data{'port'};
-        my $server = fake_imap_server->new();
+        my $server = fake_imap_server->new(%data);
         $server->run();
     } elsif ($argument eq '-h' or $argument eq '--help') {
         print_help();
