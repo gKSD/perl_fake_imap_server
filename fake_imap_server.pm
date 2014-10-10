@@ -8,7 +8,9 @@ use warnings;
 use IO::Socket;
 use strict;
 use warnings;
+use Switch;
 use Data::Dumper;
+
 
 #TODO: сделать демона из этого!!!!!!!!!!!!
 
@@ -33,16 +35,34 @@ if(defined $argument) {
         my %data;
         while (defined ($argument = shift @ARGV))
         {
-            if (my @fields = $argument =~ /--(\w+)=(\w+)/g) {
+            if (my @fields = $argument =~ /\-\-(\w+)\=(\w+)/g) {
                 $data{$fields[0]} = $fields[1];
+            }
+            elsif ($argument =~ /\-[hplcts]/g)
+            {
+                my $param = $argument;
+                if(defined ($_ = shift @ARGV) and (m/\w+/)){    
+                        switch ($param) {
+                            case '-h' { $param = 'host' }
+                            case '-p' { $param = 'port' }
+                            case '-l' { $param = 'listen' }
+                            case '-c' { $param = 'config-file' }
+                            case '-t' { $param = 'tests' }
+                            case '-s' { $param = 'scenario' }
+                        }
+                        $data{$param} = $_;
+                }
+                else
+                {
+                    die "unrecognized param found (It should be like: '-p param_value' or '--param=param_value')\n";
+                }
             }
             else
             {
-                die "unrecognized param found (It should be like: --param=param_value)\n";
+                die "unrecognized param found (It should be like: '-p param_value' or '--param=param_value')\n";
             }
 
         }
-        print 'Hashmap: '.Dumper(%data);
         my $server = fake_imap_server->new(%data);
         $server->run();
     } elsif ($argument eq '-h' or $argument eq '--help') {
@@ -68,6 +88,7 @@ sub new {
     $self->{init_params} = $args;
     $self->{server} = undef;
 
+    print "&&& ".$self->{init_params}->{port}."\n";
 =begin
     $self->{server} = IO::Socket::INET->new(  
         LocalAddr    => 'localhost',
@@ -79,12 +100,13 @@ sub new {
 =cut
 
     bless $self, $class;
-    print "Init_params->{aaaa}: ".Dumper($self->{init_params}->{aaaa});
+    #print "Init_params->{aaaa}: ".Dumper($self->{init_params}->{aaaa});
 
 
     $self->init();
-    my $port = (defined $self->{init_param}->{port}? $self->{init_param}->{port}: 8899);
-    warn "Fake imap server is listening $port port\n";
+    my $port = ((defined $self->{init_params}->{port})? $self->{init_params}->{port}: 8899);
+    my $host = (defined $self->{init_params}->{host}? $self->{init_params}->{host}: 'localhost');
+    warn "Fake imap server started [$host:$port]\n";
 
     return $self;
 }
@@ -93,12 +115,12 @@ sub init
 {
     my $self = shift;
     $self->{server} = IO::Socket::INET->new(
-        LocalAddr    => (defined $self->{init_param}->{host}? $self->{init_param}->{host}: 'localhost'),
-        LocalPort    => (defined $self->{init_param}->{port}? $self->{init_param}->{port}: 8899),
+        LocalAddr    => (defined $self->{init_params}->{host}? $self->{init_params}->{host}: 'localhost'),
+        LocalPort    => (defined $self->{init_params}->{port}? $self->{init_params}->{port}: 8899),
         Type         => SOCK_STREAM,
-        ReuseAddr    => (defined $self->{init_param}->{ReuseAddr}? $self->{init_param}->{ReuseAddr}: 1),
-        Listen       => (defined $self->{init_param}->{listen}? $self->{init_param}->{listen}: 5)
-    ) or die "coud not open port\n";
+        ReuseAddr    => (defined $self->{init_params}->{ReuseAddr}? $self->{init_params}->{ReuseAddr}: 1),
+        Listen       => (defined $self->{init_params}->{listen}? $self->{init_params}->{listen}: 5)
+    ) or die "coud not open connection\n";
 
 }
 
