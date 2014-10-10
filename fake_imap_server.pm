@@ -15,6 +15,19 @@ use Data::Dumper;
 
 #my $config;
 
+my $argument = shift @ARGV or 'qqq';
+
+if ($argument eq 'run') {
+    my $a = fake_imap_server->new();
+    $a->run();
+} else {
+    print "Usage:\n";
+    print "--port=<port>\n";
+    print "--host=<host>\n";
+    print "--listen=<listen>\n";
+}
+
+
 sub new {
     my $proto = shift;
     my $class = ref($proto) || $proto;
@@ -38,7 +51,7 @@ sub new {
     bless $self, $class;
     print "Init_params: ".Dumper($self->{init_params}->{aaaa});
 
-    warn "Fake imap server is listening $port port\n";
+    #warn "Fake imap server is listening $port port\n";
 
     return $self;
 }
