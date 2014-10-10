@@ -11,6 +11,7 @@ use warnings;
 use Switch;
 use Data::Dumper;
 
+use Config::YAML;
 
 #TODO: сделать демона из этого!!!!!!!!!!!!
 
@@ -22,8 +23,8 @@ sub print_help
     print "     --host [-h] =<host>\n";
     print "     --listen [-l] =<listen>\n";
 
-    print "\n     --config-file [-c] =</dir/config_file>\n";
-    print "     --tests [-t] =</dir/test_file>\n";
+    print "\n     --config_file [-c] =</dir/config_file>\n";
+    print "     --test [-t] =</dir/test_file>\n";
     print "     --scenario [-s] =</dir/scenario_file>\n";
 }
 
@@ -35,19 +36,19 @@ if(defined $argument) {
         my %data;
         while (defined ($argument = shift @ARGV))
         {
-            if (my @fields = $argument =~ /\-\-(\w+)\=(\w+)/g) {
+            if (my @fields = $argument =~ /^\-\-(\w+)\=([\w\.\/]+)$/g) {
                 $data{$fields[0]} = $fields[1];
             }
-            elsif ($argument =~ /\-[hplcts]/g)
+            elsif ($argument =~ /^\-[hplcts]$/g)
             {
                 my $param = $argument;
-                if(defined ($_ = shift @ARGV) and (m/\w+/)){    
+                if(defined ($_ = shift @ARGV) and (m/^([\w\.\/]+)$/)){    
                         switch ($param) {
                             case '-h' { $param = 'host' }
                             case '-p' { $param = 'port' }
                             case '-l' { $param = 'listen' }
-                            case '-c' { $param = 'config-file' }
-                            case '-t' { $param = 'tests' }
+                            case '-c' { $param = 'config_file' }
+                            case '-t' { $param = 'test' }
                             case '-s' { $param = 'scenario' }
                         }
                         $data{$param} = $_;
@@ -114,6 +115,12 @@ sub new {
 sub init
 {
     my $self = shift;
+
+    if (defined $self->{init_params}->{config_file})
+    {
+        $self->parse_config($self->{init_params}->{config_file});
+    }
+
     $self->{server} = IO::Socket::INET->new(
         LocalAddr    => (defined $self->{init_params}->{host}? $self->{init_params}->{host}: 'localhost'),
         LocalPort    => (defined $self->{init_params}->{port}? $self->{init_params}->{port}: 8899),
@@ -121,7 +128,6 @@ sub init
         ReuseAddr    => (defined $self->{init_params}->{ReuseAddr}? $self->{init_params}->{ReuseAddr}: 1),
         Listen       => (defined $self->{init_params}->{listen}? $self->{init_params}->{listen}: 5)
     ) or die "coud not open connection\n";
-
 }
 
 sub run {
@@ -165,7 +171,65 @@ sub process_request
     exit 0;
 }
 
-# $self->process_args( \@ARGV, $template ) if defined @ARGV;
-# LOOK !!!!!!!!!!  sub configure
+sub parse_config
+{
+    my $self = shift;
+    my $config_file = shift;
+
+    print "$config_file\n";
+  
+    open FILE, $config_file or return;
+
+    while (defined (my $line = <FILE>)) {
+        if ($line =~ /^(\w+)[ ]+([\w\.\/]*)$/) {
+            my $key = $1;
+            my $value = $2;
+
+=begin 
+            ### Параметры, передаваемые напрямую - более приоритетные
+            switch ($param) {
+                case 'host' {
+                        unless (defined $self->{init_params}->{config_file}) {
+                            $param = 'host';
+                        }
+                    }
+                case 'port' {
+                        $param = 'port'
+                    }
+                case 'listen' {
+                        $param = 'listen'
+                    }
+                case 'config_file' {
+                        $param = 'config_file'
+                    }
+                case 'test' {
+                        $param = 'test'
+                    }
+                case 'scenario' {
+                        $param = 'scenario'
+                    }
+            }
+
+=cut
+
+            print "$key => $value \n";
+        }
+    }
+    close FILE;
+    
+=begin
+    while(<STDIN>) { # читаем по строке
+        if ($_ =~ /^(\w+) (\w*)$/) {
+            my $key = $1;
+            my $value = $2;
+        }
+   }
+=cut
+
+### May use YAML
+### my $config = Config::YAML->new( config => $config_file );
+### print Dumper( $config );
+### 
+}
 
 1;
