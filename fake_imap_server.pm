@@ -8,23 +8,38 @@ use warnings;
 use IO::Socket;
 use strict;
 use warnings;
-
 use Data::Dumper;
 
 #TODO: сделать демона из этого!!!!!!!!!!!!
 
-#my $config;
-
-my $argument = shift @ARGV or 'qqq';
-
-if ($argument eq 'run') {
-    my $a = fake_imap_server->new();
-    $a->run();
-} else {
+sub print_help
+{
     print "Usage:\n";
-    print "--port=<port>\n";
-    print "--host=<host>\n";
-    print "--listen=<listen>\n";
+    print "     to run as script: ./fake_imap_server.pm run\n\n";
+    print "     --port [p] =<port>\n";
+    print "     --host [-h] =<host>\n";
+    print "     --listen [-l] =<listen>\n";
+
+    print "\n     --config-file [-c] =</dir/config_file>\n";
+    print "     --tests [-t] =</dir/test_file>\n";
+    print "     --scenario [-s] =</dir/scenario_file>\n";
+}
+
+my $argument = shift @ARGV;
+print Dumper(@ARGV);
+
+if(defined $argument) {
+    if ($argument eq 'run') {
+        $argument = shift @ARGV;
+        my $server = fake_imap_server->new();
+        $server->run();
+    } elsif ($argument eq '-h' or $argument eq '--help') {
+        print_help();
+    } else {
+        print_help();
+    }
+} else{
+   print_help(); 
 }
 
 
@@ -35,11 +50,13 @@ sub new {
     my $args  = @_ == 1 ? shift : {@_};
     
     $self->{client} = undef;
-    $self->{my_commandline} = undef;
     
     print "Args: ".Dumper($args);
     
     $self->{init_params} = $args;
+    $self->{server} = undef;
+
+=begin
     $self->{server} = IO::Socket::INET->new(  
         LocalAddr    => 'localhost',
         LocalPort    => 8899,
@@ -47,13 +64,30 @@ sub new {
         ReuseAddr    => 1,
         Listen       => 5
     ) or die "could not open port\n";
+=cut
 
     bless $self, $class;
-    print "Init_params: ".Dumper($self->{init_params}->{aaaa});
+    print "Init_params->{aaaa}: ".Dumper($self->{init_params}->{aaaa});
 
-    #warn "Fake imap server is listening $port port\n";
+
+    $self->init();
+    my $port = (defined $self->{init_param}->{port}? $self->{init_param}->{port}: 8899);
+    warn "Fake imap server is listening $port port\n";
 
     return $self;
+}
+
+sub init
+{
+    my $self = shift;
+    $self->{server} = IO::Socket::INET->new(
+        LocalAddr    => (defined $self->{init_param}->{host}? $self->{init_param}->{host}: 'localhost'),
+        LocalPort    => (defined $self->{init_param}->{port}? $self->{init_param}->{port}: 8899),
+        Type         => SOCK_STREAM,
+        ReuseAddr    => (defined $self->{init_param}->{ReuseAddr}? $self->{init_param}->{ReuseAddr}: 1),
+        Listen       => (defined $self->{init_param}->{listen}? $self->{init_param}->{listen}: 5)
+    ) or die "coud not open port\n";
+
 }
 
 sub run {
@@ -94,36 +128,6 @@ sub process_request
         print $client "pid $$ > ", $line;
     }
     exit 0;
-}
-
-sub get_commandline()
-{
-    my $self = shift;
-    my $prop = $self->{server};
-
-    ### see if we can find the full command line
-    if (open _CMDLINE, "/proc/$$/cmdline") { # unix specific
-        my $line = do { local $/ = undef; <_CMDLINE> };
-        close _CMDLINE;
-        if ($line =~ /^(.+)$/) { # need to untaint to allow for later hup
-            return [split /\0/, $1];
-        }
-    }
-
-    my $script = $0;
-    $script = $ENV{'PWD'} .'/'. $script if $script =~ m|^[^/]+/| && $ENV{'PWD'}; # add absolute to relative
-    $script =~ /^(.+)$/; # untaint for later use in hup
-    return [ $1, @ARGV ]
-}
-
-sub commandline
-{
-    my $self = shift;
-    if(@_)
-    {
-        $self->{my_commandline} = ref($_[0]) ? shift : \@_;
-    }
-    return $self->{my_commandline} || die "commandline was not set during initialization";
 }
 
 # $self->process_args( \@ARGV, $template ) if defined @ARGV;
