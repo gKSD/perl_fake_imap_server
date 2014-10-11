@@ -120,6 +120,8 @@ sub init
     {
         $self->parse_config($self->{init_params}->{config_file});
     }
+    
+    print "After parse: ".Dumper($self->{init_params})."\n"; 
 
     $self->{server} = IO::Socket::INET->new(
         LocalAddr    => (defined $self->{init_params}->{host}? $self->{init_params}->{host}: 'localhost'),
@@ -180,39 +182,47 @@ sub parse_config
   
     open FILE, $config_file or return;
 
+    my $do_add = 0;
+
     while (defined (my $line = <FILE>)) {
+        $do_add = 1;
         if ($line =~ /^(\w+)[ ]+([\w\.\/]*)$/) {
             my $key = $1;
             my $value = $2;
 
-=begin 
             ### Параметры, передаваемые напрямую - более приоритетные
-            switch ($param) {
+            switch ($key) {
                 case 'host' {
-                        unless (defined $self->{init_params}->{config_file}) {
-                            $param = 'host';
+                        if (defined $self->{init_params}->{host}) {
+                            $do_add = 0;
                         }
                     }
                 case 'port' {
-                        $param = 'port'
+                        if (defined $self->{init_params}->{port}) {
+                            $do_add = 0;
+                        }
                     }
                 case 'listen' {
-                        $param = 'listen'
-                    }
-                case 'config_file' {
-                        $param = 'config_file'
+                        if (defined $self->{init_params}->{listen}) {
+                            $do_add = 0;
+                        }
                     }
                 case 'test' {
-                        $param = 'test'
+                        if (defined $self->{init_params}->{test}) {
+                            $do_add = 0;
+                        }
                     }
                 case 'scenario' {
-                        $param = 'scenario'
+                        if (defined $self->{init_params}->{scenario}) {
+                            $do_add = 0;
+                        }
                     }
             }
 
-=cut
-
-            print "$key => $value \n";
+            if ($do_add)
+            {
+                $self->{init_params}{$key} = $value;
+            }
         }
     }
     close FILE;
