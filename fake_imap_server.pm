@@ -6,6 +6,7 @@ use warnings;
 
 #use Socket qw(inet_aton inet_ntoa AF_INET AF_UNIX SOCK_DGRAM SOCK_STREAM);
 use IO::Socket;
+use IO::File;
 use strict;
 use warnings;
 use Switch;
@@ -84,30 +85,14 @@ sub new {
     
     $self->{client} = undef;
     
-    print "Args: ".Dumper($args);
-    
+    print "Args: ".Dumper(scalar(keys %$args))."\n";
     $self->{init_params} = $args;
     $self->{server} = undef;
-
-    print "&&& ".$self->{init_params}->{port}."\n";
-=begin
-    $self->{server} = IO::Socket::INET->new(  
-        LocalAddr    => 'localhost',
-        LocalPort    => 8899,
-        Type         => SOCK_STREAM,
-        ReuseAddr    => 1,
-        Listen       => 5
-    ) or die "could not open port\n";
-=cut
 
     bless $self, $class;
     #print "Init_params->{aaaa}: ".Dumper($self->{init_params}->{aaaa});
 
-
     $self->init();
-    my $port = ((defined $self->{init_params}->{port})? $self->{init_params}->{port}: 8899);
-    my $host = (defined $self->{init_params}->{host}? $self->{init_params}->{host}: 'localhost');
-    warn "Fake imap server started [$host:$port]\n";
 
     return $self;
 }
@@ -115,13 +100,30 @@ sub new {
 sub init
 {
     my $self = shift;
+    my $args = @_ == 1 ? shift : {@_};
+
+    ###Обновляем значения в hashmap $self->{init_params}, если были переданы новые аргументы в init
+    if(scalar(keys %$args) != 0) {
+        foreach my $key (keys %$args) {
+            $self->{init_params}->{$key} = $$args{$key};
+        }
+    }
 
     if (defined $self->{init_params}->{config_file})
     {
+        print "parse config\n";
         $self->parse_config($self->{init_params}->{config_file});
     }
     
     print "After parse: ".Dumper($self->{init_params})."\n"; 
+}
+
+sub run {
+    my $self = shift;
+    my $args  = @_ == 1 ? shift : {@_};
+    if(scalar(keys %$args) != 0) {
+        $self->init($args);
+    }
 
     $self->{server} = IO::Socket::INET->new(
         LocalAddr    => (defined $self->{init_params}->{host}? $self->{init_params}->{host}: 'localhost'),
@@ -130,10 +132,10 @@ sub init
         ReuseAddr    => (defined $self->{init_params}->{ReuseAddr}? $self->{init_params}->{ReuseAddr}: 1),
         Listen       => (defined $self->{init_params}->{listen}? $self->{init_params}->{listen}: 5)
     ) or die "coud not open connection\n";
-}
 
-sub run {
-    my $self = shift;
+    my $port = ((defined $self->{init_params}->{port})? $self->{init_params}->{port}: 8899);
+    my $host = (defined $self->{init_params}->{host}? $self->{init_params}->{host}: 'localhost');
+    warn "Fake imap server started [$host:$port]\n";
 
     while ($self->{client} = $self->{server}->accept())
     {
@@ -180,11 +182,17 @@ sub parse_config
 
     print "$config_file\n";
   
-    open FILE, $config_file or return;
+    #open FILE, $config_file or return;
+    my $fh = new IO::File;
+    unless ($fh->open("< $config_file"))
+    {
+        return;
+    }
 
     my $do_add = 0;
 
-    while (defined (my $line = <FILE>)) {
+    while (defined (my $line = <$fh>)) {
+        chomp $line;
         $do_add = 1;
         if ($line =~ /^(\w+)[ ]+([\w\.\/]*)$/) {
             my $key = $1;
@@ -225,7 +233,8 @@ sub parse_config
             }
         }
     }
-    close FILE;
+    #close FILE;
+    $fh->close;
     
 =begin
     while(<STDIN>) { # читаем по строке

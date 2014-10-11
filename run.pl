@@ -10,7 +10,11 @@ $fake_imap_server->run();
 
 use fake_imap_server;
 
-our $fake_imap_server = fake_imap_server->new(config_file => 'config.conf',aaaa => 'ddd.ddd');
-$fake_imap_server->run();
+#our $fake_imap_server = fake_imap_server->new(config_file => 'config.conf', host => 'localhost', port => 8080);
+#$fake_imap_server->run();
+
+our $fake_imap_server = fake_imap_server->new(host => 'omnoomno');
+$fake_imap_server->run(config_file => 'config.conf', host => 'localhost', port => 8080);
+
 
 1;
