@@ -175,6 +175,21 @@ sub process_request
     exit 0;
 }
 
+sub parse_scenario
+{
+    my $self = shift;
+    my $scenario = shift;
+
+    my $fh = new IO::File;
+    unless ($fh->open("< $scenario"))
+    {
+        die "imap scenario  not found\n";
+    }
+### Creating hashmap
+### Keys: LOGIN, CAPABILITY
+    $fh->close();
+}
+
 sub parse_config
 {
     my $self = shift;
