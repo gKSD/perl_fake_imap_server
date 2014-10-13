@@ -12,7 +12,7 @@ use warnings;
 use Switch;
 use Data::Dumper;
 
-use Config::YAML;
+#use Config::YAML;
 
 #TODO: сделать демона из этого!!!!!!!!!!!!
 
@@ -87,12 +87,32 @@ sub new {
     
     print "Args: ".Dumper(scalar(keys %$args))."\n";
     $self->{init_params} = $args;
-    $self->{server} = undef;
+    $self->{server} = undef; #для хранени я соединения
+    $self->{scenario} = undef;
 
     bless $self, $class;
     #print "Init_params->{aaaa}: ".Dumper($self->{init_params}->{aaaa});
 
     $self->init();
+
+### TESTTTTTTTTTTT
+    print "TEST\n";
+    my $test = "capability => 123, lost => 456";
+    my $string="1:one;2:two;3:three";
+=begin
+    my %hash;
+
+    my @list1 = split /;/, $string;
+    foreach my $item(@list1) {
+      my ($i,$j)= split(/:/, $item);
+        $hash{$i} = $j;
+    }
+=cut
+    my %hash = map{split /\:/, $_}(split /;/, $string); 
+    print Dumper \%hash;
+
+    print "TEST end\n";
+### TESTTTTTTTTTTTTTTT
 
     return $self;
 }
@@ -185,8 +205,45 @@ sub parse_scenario
     {
         die "imap scenario  not found\n";
     }
-### Creating hashmap
-### Keys: LOGIN, CAPABILITY
+### Creating hashmap from scenario
+### Keys: login, capability
+
+    my $key;
+    my %hash;
+    my $k = 0; # используется для подсчета скобочек
+    while (<$fh>) {
+        chomp $_;
+
+        if (/\{/) {
+            $k++;
+            next;
+        }
+        elsif (/\}/) {
+            $k--;
+            next;
+        }
+        if ($k == 0) {
+            $key = lc $_;
+            unless ($key eq 'login' or $key eq 'capability' or $key eq 'noop' or $key eq 'select'
+                    or $key eq 'status' or $key eq 'fetch' or $key eq 'id' or $key eq 'examine'
+                    or $key eq 'create' or $key eq 'delete' or $key eq 'rename' or $key eq 'subscribe'
+                    or $key eq 'unsubscribe' or $key eq 'list' or $key eq 'xlist' or $key eq 'lsub'
+                    or $key eq 'append' or $key eq 'check' or $key eq 'unselect' or $key eq 'expunge'
+                    or $key eq 'search' or $key eq 'store' or $key eq 'copy' or $key eq 'move'
+                    or $key eq 'close') {
+                die "invalid key in imap scenario ($scenario)\n";
+            }
+            my @mas = [];
+            push (@mas, $_);
+            %hash{$_} = @mas;
+            #%self->{scenario}{$key} = @mas;
+        }
+        else {
+            #push %hash{$key} $_;
+            #push(%hash{$key}, ($_));
+        }
+    }
+    print "scenario hash: ".Dumper(%hash)."\n";
     $fh->close();
 }
 
@@ -196,7 +253,19 @@ sub parse_config
     my $config_file = shift;
 
     print "$config_file\n";
-  
+
+    ### TEST
+    my $ff = new IO::File;
+    $ff->open("< $config_file");
+    while (<$ff>) {
+        if ( $_ eq 'host')
+        {
+            print "TESTTT is equal to host ($_)\n";
+        }
+    }
+    $ff->close();
+    ###
+ 
     #open FILE, $config_file or return;
     my $fh = new IO::File;
     unless ($fh->open("< $config_file"))
@@ -251,19 +320,62 @@ sub parse_config
     #close FILE;
     $fh->close;
     
-=begin
-    while(<STDIN>) { # читаем по строке
-        if ($_ =~ /^(\w+) (\w*)$/) {
-            my $key = $1;
-            my $value = $2;
-        }
-   }
-=cut
-
 ### May use YAML
 ### my $config = Config::YAML->new( config => $config_file );
 ### print Dumper( $config );
-### 
+
 }
 
+=begin
+        if (/login/i)
+        {}
+        elsif (/capability/i)
+        {}
+        elsif (/noop/i)
+        {}
+        elsif (/select/i)
+        {}
+        elsif (/status/i)
+        {}
+        elsif (/fetch/i)
+        {}
+        elsif (/id/i)
+        {}
+        elsif (/examine/i)
+        {}
+        elsif (/create/i)
+        {}
+        elsif (/delete/i)
+        {}
+        elsif (/rename/i)
+        {}
+        elsif (/subscribe/i)
+        {}
+        elsif (/unsubscribe/i)
+        {}
+        elsif (/list/i)
+        {}
+        elsif (/xlist/i)
+        {}
+        elsif (/lsub/i)
+        {}
+        elsif (/append/i)
+        {}
+        elsif (/check/i)
+        {}
+        elsif (/unselect/i)
+        {}
+        elsif (/expunge/i)
+        {}
+        elsif (/search/i)
+        {}
+        elsif (/store/i)
+        {}
+        elsif (/copy/i)
+        {}
+        elsif (/move/i)
+        {}
+        elsif (/close/i)
+        {}
+=cut
 1;

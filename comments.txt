@@ -157,3 +157,52 @@ hash_ref переменная,
 statement запрос вида select * where id=?
 
 key_field это то, что подставится вместо згака вопроса)
+
+
+
+
+//*********************************************************************************************************************************************************************************************
+Основные ключи 
+if (command == "LOGOUT") CmdLogout();
+else if (command == "NOOP") CmdNop();
+else if (command == "ID") CmdId();
+else if (command == "CAPABILITY") CmdCapability();
+else if (command == "SELECT") CmdSelect(false);
+else if (command == "EXAMINE") CmdSelect(true);
+else if (command == "CREATE") CmdCreate();
+else if (command == "DELETE") CmdDelete();
+else if (command == "RENAME") CmdRename();
+else if (command == "SUBSCRIBE") CmdSubscribe();
+else if (command == "UNSUBSCRIBE") CmdUnsubscribe();
+else if (command == "LIST") CmdList();
+else if (command == "XLIST") CmdList(true);
+else if (command == "LSUB") CmdList();
+else if (command == "STATUS") CmdStatus();
+else if (command == "APPEND") CmdAppend();
+if( command != "COPY" && command != "FETCH" && command != "APPEND" )
+
+UID
+
+
+
+
+f (command == "CHECK") CmdCheck();
+    else if (command == "CLOSE" || command == "UNSELECT") CmdClose();
+        else if (command == "EXPUNGE") CmdExpunge();
+            else if (command == "SEARCH") CmdSearch();
+                else if (command == "FETCH") CmdFetch();
+                ````else if (command == "STORE") CmdStore();
+                ````else if (command == "COPY") CmdCopy();
+                ````else if (command == "MOVE") CmdMove();
+                ````else if (command == "UID") CmdUid();
+
+
+
+
+
+
+
+
+
+
+
