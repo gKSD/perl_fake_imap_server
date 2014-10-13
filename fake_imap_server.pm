@@ -240,20 +240,16 @@ sub parse_scenario
                 die "invalid key in imap scenario ($scenario)\n";
             }
             my @mas = [];
-            #push (@mas, $_);
-            @hash{$_} =     @mas;
-            #%self->{scenario}{$key} = @mas;
+            @hash{$_} = @mas;
         }
         else {
-            push @hash{$key}, $_;
-            print "Iter hash ".Dumper(\%hash)."\n";
-            #push(%hash{$key}, $_);
+            #push @hash{$key}, "qe";
+            push  @{$hash{$key}}, $_;
         }
     }
     #print "scenario hash: ".Dumper(\%hash)."\n";
     $fh->close();
     $self->{scenario} = \%hash;
-    use Data::Dumper;
     print Dumper($self);
 }
 
