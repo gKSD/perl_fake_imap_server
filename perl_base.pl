@@ -2,7 +2,7 @@
 
 use Net::Server::Fork;
 use JSON;
-
+use Data::Dumper;
 use strict;
 #=begin
 sub some_proc {
@@ -54,4 +54,23 @@ for(my $i = 0; $i < 2; $i++)
 }
 #=cut
 print "123";
+
+### TESTTTTTTTTTTT
+    print "TEST\n";
+    my $test = "capability => 123, lost => 456";
+    my $string="1:one;2:two;3:three";
+=begin
+    my %hash;
+
+    my @list1 = split /;/, $string;
+    foreach my $item(@list1) {
+      my ($i,$j)= split(/:/, $item);
+        $hash{$i} = $j;
+    }
+=cut
+    my %hash = map{split /\:/, $_}(split /;/, $string); 
+    print Dumper \%hash;
+
+    print "TEST end\n";
+### TESTTTTTTTTTTTTTTT
 1;

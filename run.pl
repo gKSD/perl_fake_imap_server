@@ -14,8 +14,5 @@ use fake_imap_server;
 #$fake_imap_server->run();
 
 our $fake_imap_server = fake_imap_server->new(host => 'omnoomno', scenario => 'scenario.txt');
-#our $fake_imap_server = fake_imap_server->new(host => 'omnoomno', scenario => 'scenario.txt');
 $fake_imap_server->run(config_file => 'config.conf', host => 'localhost', port => 8081);
-
-
 1;

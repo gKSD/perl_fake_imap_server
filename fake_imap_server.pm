@@ -86,40 +86,13 @@ sub new {
     $self->{client} = undef;
     
     print "Args: ".Dumper(scalar(keys %$args))."\n";
-    $self->{init_params} = $args;
-    $self->{server} = undef; #для хранени я соединения
-    $self->{scenario} = undef;
+    $self->{init_params} = undef; #$args;
+    $self->{server} = undef; # хранит соединения
+    $self->{scenario} = undef; # сценарий ответов
 
     bless $self, $class;
-    #print "Init_params->{aaaa}: ".Dumper($self->{init_params}->{aaaa});
 
-    $self->init();
-
-    if (defined $self->{init_params}->{scenario}) {
-        print "parse scenario\n";
-        $self->parse_scenario($self->{init_params}->{scenario});
-    }
-
-
-### TESTTTTTTTTTTT
-    print "TEST\n";
-    my $test = "capability => 123, lost => 456";
-    my $string="1:one;2:two;3:three";
-=begin
-    my %hash;
-
-    my @list1 = split /;/, $string;
-    foreach my $item(@list1) {
-      my ($i,$j)= split(/:/, $item);
-        $hash{$i} = $j;
-    }
-=cut
-    my %hash = map{split /\:/, $_}(split /;/, $string); 
-    print Dumper \%hash;
-
-    print "TEST end\n";
-### TESTTTTTTTTTTTTTTT
-
+    $self->init($args);
     return $self;
 }
 
@@ -128,20 +101,19 @@ sub init
     my $self = shift;
     my $args = @_ == 1 ? shift : {@_};
 
+    if (defined $args->{config_file}) {
+        $self->parse_config($args->{config_file});
+    }
     ###Обновляем значения в hashmap $self->{init_params}, если были переданы новые аргументы в init
-    if(scalar(keys %$args) != 0) {
-        foreach my $key (keys %$args) {
-            $self->{init_params}->{$key} = $$args{$key};
-        }
+    foreach my $key (keys %$args) {
+        $self->{init_params}->{$key} = $$args{$key};
     }
 
-    if (defined $self->{init_params}->{config_file})
-    {
-        print "parse config\n";
-        $self->parse_config($self->{init_params}->{config_file});
+    if (defined $args->{scenario}) {
+        %{$self->{scenario}} = ();
+        $self->parse_scenario($self->{init_params}->{scenario});
     }
-    
-    print "After parse: ".Dumper($self->{init_params})."\n"; 
+    print "After all parse: ".Dumper($self)."\n"; 
 }
 
 sub run {
@@ -201,6 +173,9 @@ sub process_request
     exit 0;
 }
 
+sub parse_file_with_test
+{}
+
 sub parse_scenario
 {
     my $self = shift;
@@ -228,6 +203,10 @@ sub parse_scenario
             $k--;
             next;
         }
+        elsif (/^$/)
+        {
+            next;
+        }
         if ($k == 0) {
             $key = lc $_;
             unless ($key eq 'login' or $key eq 'capability' or $key eq 'noop' or $key eq 'select'
@@ -239,18 +218,17 @@ sub parse_scenario
                     or $key eq 'close') {
                 die "invalid key in imap scenario ($scenario)\n";
             }
-            my @mas = [];
-            @hash{$_} = @mas;
+            my @ar = [];
+            @hash{$_} = @ar;
         }
         else {
             #push @hash{$key}, "qe";
-            push  @{$hash{$key}}, $_;
+            s/\s*//; #убирает пробелы в начале строки
+            push @{$hash{$key}}, $_;
         }
     }
-    #print "scenario hash: ".Dumper(\%hash)."\n";
     $fh->close();
     $self->{scenario} = \%hash;
-    print Dumper($self);
 }
 
 sub parse_config
@@ -289,6 +267,7 @@ sub parse_config
             my $value = $2;
 
             ### Параметры, передаваемые напрямую - более приоритетные
+=begin
             switch ($key) {
                 case 'host' {
                         if (defined $self->{init_params}->{host}) {
@@ -321,6 +300,8 @@ sub parse_config
             {
                 $self->{init_params}{$key} = $value;
             }
+=cut
+            $self->{init_params}{$key} = $value;
         }
     }
     #close FILE;
