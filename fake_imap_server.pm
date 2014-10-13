@@ -95,6 +95,12 @@ sub new {
 
     $self->init();
 
+    if (defined $self->{init_params}->{scenario}) {
+        print "parse scenario\n";
+        $self->parse_scenario($self->{init_params}->{scenario});
+    }
+
+
 ### TESTTTTTTTTTTT
     print "TEST\n";
     my $test = "capability => 123, lost => 456";
@@ -234,16 +240,17 @@ sub parse_scenario
                 die "invalid key in imap scenario ($scenario)\n";
             }
             my @mas = [];
-            push (@mas, $_);
-            %hash{$_} = @mas;
+            #push (@mas, $_);
+            @hash{$_} = @mas;
             #%self->{scenario}{$key} = @mas;
         }
         else {
-            #push %hash{$key} $_;
-            #push(%hash{$key}, ($_));
+            push @hash{$key} $_;
+            print "Iter hash ".Dumper(\%hash)."\n";
+            #push(%hash{$key}, $_);
         }
     }
-    print "scenario hash: ".Dumper(%hash)."\n";
+    #print "scenario hash: ".Dumper(\%hash)."\n";
     $fh->close();
 }
 
