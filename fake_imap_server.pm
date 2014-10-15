@@ -216,11 +216,8 @@ sub parse_file_with_test {
                 my $key = $1;
                 my $value = $2;
                 my %hash = ();
-
-                print "parse test: $key => $value\n";
-
                 my @ar = split (/, */, $value);
-                print Dumper(\@ar);
+
                 @{$hash{$key}} = @ar;
                
                 push @{$test_array[-1]}, \%hash;
@@ -229,11 +226,10 @@ sub parse_file_with_test {
                 #}
 
             }
-            #push @{$hash{$key}}, $_;
         }
     }
 
-    print "REsult hash: ".Dumper(\@test_array)."\n";
+    $self->{test} = \@test_array;
     $fh->close();
 }
 
@@ -245,6 +241,7 @@ sub parse_scenario {
     unless ($fh->open("< $scenario")) {
         die "imap scenario  not found\n";
     }
+
 ### Creating hashmap from scenario
 ### Keys: login, capability
 
