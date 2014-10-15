@@ -86,9 +86,10 @@ sub new {
     $self->{client} = undef;
     
     print "Args: ".Dumper(scalar(keys %$args))."\n";
-    $self->{init_params} = undef; #$args;
-    $self->{server} = undef; # хранит соединения
-    $self->{scenario} = undef; # сценарий ответов
+    $self->{init_params} = undef;                       # $args;
+    $self->{server} = undef;                            # хранит соединения
+    $self->{scenario} = undef;                          # сценарий ответов
+    $self->{test} = undef;                             # хранение тестов
 
     bless $self, $class;
 
@@ -109,10 +110,16 @@ sub init
         $self->{init_params}->{$key} = $$args{$key};
     }
 
-    if (defined $args->{scenario}) {
+    if (defined $self->{init_params}->{scenario}) {
         %{$self->{scenario}} = ();
         $self->parse_scenario($self->{init_params}->{scenario});
     }
+
+    if (defined $self->{init_params}->{test}) {
+        @{$self->{test}} = [];
+        $self->parse_file_with_test($self->{init_params}->{test});
+    }
+
     print "After all parse: ".Dumper($self)."\n"; 
 }
 
@@ -155,8 +162,7 @@ sub run {
     }
 }
 
-sub process_request
-{
+sub process_request {
     my $self = shift;
     my $client = $self->{client};
     warn "client connected to pid $$\n";
@@ -173,17 +179,70 @@ sub process_request
     exit 0;
 }
 
-sub parse_file_with_test
-{}
+sub parse_file_with_test {
+    my $self = shift;
+    my $test_file = shift;
 
-sub parse_scenario
-{
+    my $fh = new IO::File;
+    unless ($fh->open("< $test_file")) {
+        die "file($test_file) with imap tests not found\n";
+    }
+
+    my $k = 0;
+    my @test_array;
+    while(<$fh>) {
+        chomp $_;
+        
+        s/\s*//; 
+        if (/\{/) {
+            $k++;
+            next;
+        }
+        elsif (/\}/) {
+            $k--;
+            next;
+        }
+        elsif (/^$/) {
+            next;
+        }
+
+        if ($k == 0) {
+            #$key = lc $_;
+            my @ar = [];
+            push @test_array, @ar;
+        }
+        else {
+            if (/^(\w+):[ ]+\[([\s\,\w]+)\]$/) {
+                my $key = $1;
+                my $value = $2;
+                my %hash = ();
+
+                print "parse test: $key => $value\n";
+
+                my @ar = split (/, */, $value);
+                print Dumper(\@ar);
+                @{$hash{$key}} = @ar;
+               
+                push @{$test_array[-1]}, \%hash;
+                #if (my @ar = $value =~ /([\w]*[, ]*)*([\w]*)/) {
+                #    print "ar: ".Dumper(@ar)."\n";
+                #}
+
+            }
+            #push @{$hash{$key}}, $_;
+        }
+    }
+
+    print "REsult hash: ".Dumper(\@test_array)."\n";
+    $fh->close();
+}
+
+sub parse_scenario {
     my $self = shift;
     my $scenario = shift;
 
     my $fh = new IO::File;
-    unless ($fh->open("< $scenario"))
-    {
+    unless ($fh->open("< $scenario")) {
         die "imap scenario  not found\n";
     }
 ### Creating hashmap from scenario
