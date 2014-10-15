@@ -85,7 +85,7 @@ sub new {
     print "Args: ".Dumper(scalar(keys %$args))."\n";
     $self->{init_params} = undef;                       # $args;
     $self->{server} = undef;                            # хранит соединения
-    $self->{scenario} = undef;                          # сценарий ответов
+    $self->{imap} = undef;                          # сценарий ответов
     $self->{test} = undef;                             # хранение тестов
 
     bless $self, $class;
@@ -174,6 +174,62 @@ sub process_request {
         print $client "pid $$ > ", $line;
     }
     exit 0;
+}
+
+sub parse_test_file {
+    my $self = shift;
+    my $test_file = shift;
+
+    my $fh = new IO::File;
+    unless ($fh->open("< $test_file")) {
+        die "file($test_file) with imap tests not found\n";
+    }
+
+    my %imap = ();
+    my @test = [];
+    my $k = 0;
+
+    my $is_imap = 0;
+    my $is_test = 0;
+    while (<fh>) {
+        chomp $_;
+        s/\s*//;
+
+        if (/\{/) {
+            $k++;
+            next;
+        }
+        
+        if (/\}/) {
+            $k--;
+            next;
+        }
+        
+        if (/^$/) {
+            next;
+        }
+
+        if ($k == 0) {
+            $key = lc $_;
+            if ($key eq 'imap') {
+                $is_imap = 1;
+                next;
+            }
+            if ($key eq 'test') {
+                $is_test = 1;
+                next;
+            }
+        }
+        elsif ($k == 1) {
+        }
+        elsif ($k == 2) {
+        }
+    }
+    if ($k != 0) {
+        die "syntax error in $test_file (check '{' and '}' amount)\n";
+    }
+    
+    $fh->close();
 }
 
 sub parse_file_with_test {
