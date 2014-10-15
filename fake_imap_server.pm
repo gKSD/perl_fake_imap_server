@@ -20,7 +20,7 @@ sub print_help
 {
     print "Usage:\n";
     print "     to run as script: ./fake_imap_server.pm run\n\n";
-    print "     --port [p] =<port>\n";
+    print "     --port [-p] =<port>\n";
     print "     --host [-h] =<host>\n";
     print "     --listen [-l] =<listen>\n";
 
@@ -30,18 +30,15 @@ sub print_help
 }
 
 my $argument = shift @ARGV;
-print Dumper(@ARGV);
 
 if(defined $argument) {
     if ($argument eq 'run') {
         my %data;
-        while (defined ($argument = shift @ARGV))
-        {
+        while (defined ($argument = shift @ARGV)) {
             if (my @fields = $argument =~ /^\-\-(\w+)\=([\w\.\/]+)$/g) {
                 $data{$fields[0]} = $fields[1];
             }
-            elsif ($argument =~ /^\-[hplcts]$/g)
-            {
+            elsif ($argument =~ /^\-[hplcts]$/g) {
                 my $param = $argument;
                 if(defined ($_ = shift @ARGV) and (m/^([\w\.\/]+)$/)){    
                         switch ($param) {
@@ -56,12 +53,12 @@ if(defined $argument) {
                 }
                 else
                 {
-                    die "unrecognized param found (It should be like: '-p param_value' or '--param=param_value')\n";
+                    warn "unrecognized param found (It should be like: '-p param_value' or '--param=param_value')\n";
                 }
             }
             else
             {
-                die "unrecognized param found (It should be like: '-p param_value' or '--param=param_value')\n";
+                warn "unrecognized param found (It should be like: '-p param_value' or '--param=param_value')\n";
             }
 
         }

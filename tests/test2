@@ -1,0 +1,38 @@
+imap
+{
+    capability
+    {}
+    login
+    {}
+}
+
+test
+{
+    1
+     {
+        inbox: [001, 002, 003, 005]
+        test: [10, 11, 12]
+     }
+    2
+     {
+        inbox: [002, 005]
+        test: [10]
+     }
+}
+
+result
+{
+    1
+     {
+        qqqq
+     }
+    2
+     {
+        qqqq
+     }
+    total
+     {
+        inbox: [002, 005]
+        test: [10]
+     }
+}
