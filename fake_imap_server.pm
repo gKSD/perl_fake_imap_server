@@ -11,11 +11,21 @@ use strict;
 use warnings;
 use Switch;
 use Data::Dumper;
+#use POSIX qw(WNOHANG);
+#use POSIX qw(setsid);
+use POSIX;
+use POSIX ":sys_wait_h";
 
-#use Config::YAML;
+#use Proc::Daemon;
+#Proc::Daemon::Init;
 
 #TODO: сделать демона из этого!!!!!!!!!!!!
+my $pid = fork();
+exit() if $pid;
+die "Couldn't fork: $! " unless defined($pid);
+POSIX::setsid() or die "Can't start a new session $!";
 
+print "%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%          $$\n";
 sub print_help
 {
     print "Usage:\n";
@@ -24,13 +34,12 @@ sub print_help
     print "     --host [-h] =<host>\n";
     print "     --listen [-l] =<listen>\n";
 
-    print "\n     --config_file [-c] =</dir/config_file>\n";
+    print "\n     --config [-c] =</dir/config_file>\n";
     print "     --test [-t] =</dir/test_file>\n";
-    print "     --scenario [-s] =</dir/scenario_file>\n";
 }
 
 my $argument = shift @ARGV;
-
+print "%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%          $$\n";
 if(defined $argument) {
     if ($argument eq 'run') {
         my %data;
@@ -45,9 +54,8 @@ if(defined $argument) {
                             case '-h' { $param = 'host' }
                             case '-p' { $param = 'port' }
                             case '-l' { $param = 'listen' }
-                            case '-c' { $param = 'config_file' }
+                            case '-c' { $param = 'config' }
                             case '-t' { $param = 'test' }
-                            case '-s' { $param = 'scenario' }
                         }
                         $data{$param} = $_;
                 }
@@ -66,14 +74,16 @@ if(defined $argument) {
         $server->run();
     } elsif ($argument eq '-h' or $argument eq '--help') {
         print_help();
+        exit;
     } else {
+        print "illegal option: $argument\n";
         print_help();
+        exit;
     }
 } else{
-   print_help(); 
+   print_help();
+   exit;
 }
-
-
 sub new {
     my $proto = shift;
     my $class = ref($proto) || $proto;
@@ -99,22 +109,26 @@ sub init
     my $self = shift;
     my $args = @_ == 1 ? shift : {@_};
 
-    if (defined $args->{config_file}) {
-        $self->parse_config($args->{config_file});
+    if (defined $args->{config}) {
+        $self->parse_config($args->{config});
     }
     ###Обновляем значения в hashmap $self->{init_params}, если были переданы новые аргументы в init
     foreach my $key (keys %$args) {
         $self->{init_params}->{$key} = $$args{$key};
     }
 
-    if (defined $self->{init_params}->{scenario}) {
-        %{$self->{scenario}} = ();
-        $self->parse_scenario($self->{init_params}->{scenario});
-    }
-
     if (defined $self->{init_params}->{test}) {
         @{$self->{test}} = [];
-        $self->parse_file_with_test($self->{init_params}->{test});
+        $self->parse_test_file($self->{init_params}->{test});
+    }
+
+    if (defined $self->{init_params}->{pid_file} ) {
+        my $file = $self->{init_params}->{pid_file};
+        my $fh = IO::File->new("> $file");
+        if (defined $fh) {
+            print $fh "$$\n";
+            $fh->close;
+        }
     }
 
     print "After all parse: ".Dumper($self)."\n"; 
@@ -126,14 +140,13 @@ sub run {
     if(scalar(keys %$args) != 0) {
         $self->init($args);
     }
-
     $self->{server} = IO::Socket::INET->new(
         LocalAddr    => (defined $self->{init_params}->{host}? $self->{init_params}->{host}: 'localhost'),
         LocalPort    => (defined $self->{init_params}->{port}? $self->{init_params}->{port}: 8899),
         Type         => SOCK_STREAM,
         ReuseAddr    => (defined $self->{init_params}->{ReuseAddr}? $self->{init_params}->{ReuseAddr}: 1),
         Listen       => (defined $self->{init_params}->{listen}? $self->{init_params}->{listen}: 5)
-    ) or die "coud not open connection\n";
+    ) or die "could not open connection\n";
 
     my $port = ((defined $self->{init_params}->{port})? $self->{init_params}->{port}: 8899);
     my $host = (defined $self->{init_params}->{host}? $self->{init_params}->{host}: 'localhost');
@@ -141,6 +154,7 @@ sub run {
 
     while ($self->{client} = $self->{server}->accept())
     {
+        $SIG{CHLD} = 'IGNORE'; 
         my $pid;
         while (not defined ($pid = fork()))
         {
@@ -176,6 +190,16 @@ sub process_request {
     exit 0;
 }
 
+sub get_test_file {
+    my $self = shift;
+    return $self->{init_params}->{test};
+}
+
+sub get_tests_amount {
+    my $self = shift;
+    return ($#{$self->{test}} + 1);
+}
+
 sub parse_test_file {
     my $self = shift;
     my $test_file = shift;
@@ -186,14 +210,19 @@ sub parse_test_file {
     }
 
     my %imap = ();
-    my @test = [];
+    my $key;
+    my @test;
     my $k = 0;
 
     my $is_imap = 0;
     my $is_test = 0;
-    while (<fh>) {
+    while (<$fh>) {
         chomp $_;
         s/\s*//;
+
+        if (/^\{\}$/) {
+            next;
+        }
 
         if (/\{/) {
             $k++;
@@ -202,6 +231,10 @@ sub parse_test_file {
         
         if (/\}/) {
             $k--;
+            if ($k == 0) {
+                $is_imap = 0;
+                $is_test = 0;
+            }
             next;
         }
         
@@ -213,16 +246,46 @@ sub parse_test_file {
             $key = lc $_;
             if ($key eq 'imap') {
                 $is_imap = 1;
-                next;
             }
-            if ($key eq 'test') {
+            elsif ($key eq 'test') {
                 $is_test = 1;
-                next;
             }
         }
         elsif ($k == 1) {
+            if($is_imap) {
+                $key = lc $_;
+                unless ($key eq 'login' or $key eq 'capability' or $key eq 'noop' or $key eq 'select'
+                    or $key eq 'status' or $key eq 'fetch' or $key eq 'id' or $key eq 'examine'
+                    or $key eq 'create' or $key eq 'delete' or $key eq 'rename' or $key eq 'subscribe'
+                    or $key eq 'unsubscribe' or $key eq 'list' or $key eq 'xlist' or $key eq 'lsub'
+                    or $key eq 'append' or $key eq 'check' or $key eq 'unselect' or $key eq 'expunge'
+                    or $key eq 'search' or $key eq 'store' or $key eq 'copy' or $key eq 'move'
+                    or $key eq 'close') {
+                    warn "invalid key in imap part in $test_file\n";
+                }
+                my @ar;
+                @{$imap{$_}} = @ar; 
+            }
+            elsif ($is_test) {
+                my @ar = [];
+                push @test, @ar;
+            }
         }
         elsif ($k == 2) {
+            if ($is_imap) {
+                push @{$imap{$key}}, $_;
+            }
+            elsif($is_test) {
+                if (/^(\w+):[ ]+\[([\s\,\w]+)\]$/) {
+                    my $key1 = $1;
+                    my $value = $2;
+                    my %hash = ();
+                    my @ar = split (/, */, $value);
+
+                    @{$hash{$key1}} = @ar; 
+                    push @{$test[-1]}, \%hash;
+                }
+            }
         }
     }
     if ($k != 0) {
@@ -230,6 +293,8 @@ sub parse_test_file {
     }
     
     $fh->close();
+    $self->{test} = \@test;
+    $self->{imap} = \%imap;
 }
 
 sub parse_file_with_test {
@@ -328,7 +393,7 @@ sub parse_scenario {
                 die "invalid key in imap scenario ($scenario)\n";
             }
             my @ar = [];
-            @hash{$_} = @ar;
+            @{$hash{$_}} = @ar;
         }
         else {
             #push @hash{$key}, "qe";
@@ -347,22 +412,11 @@ sub parse_config
 
     print "$config_file\n";
 
-    ### TEST
-    my $ff = new IO::File;
-    $ff->open("< $config_file");
-    while (<$ff>) {
-        if ( $_ eq 'host')
-        {
-            print "TESTTT is equal to host ($_)\n";
-        }
-    }
-    $ff->close();
-    ###
- 
     #open FILE, $config_file or return;
     my $fh = new IO::File;
     unless ($fh->open("< $config_file"))
     {
+        warn "config_file ($config_file) not found\n";
         return;
     }
 
@@ -395,11 +449,6 @@ sub parse_config
                     }
                 case 'test' {
                         if (defined $self->{init_params}->{test}) {
-                            $do_add = 0;
-                        }
-                    }
-                case 'scenario' {
-                        if (defined $self->{init_params}->{scenario}) {
                             $do_add = 0;
                         }
                     }
