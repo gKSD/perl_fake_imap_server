@@ -128,6 +128,7 @@ sub parse_test_file {
     }
 
     $fh->close();
+    print "test_counter: $test_counter\n";
 }
 
 my @test_result;
@@ -136,8 +137,12 @@ my $tests_amount = 0;
 my $check_all = 0;
 
 if (defined $parsed_args{"test"}) {
+    print "is test\n";
     parse_test_file($parsed_args{"test"},\@test_result, \$tests_amount);
-    my $cmd = "./fake_imap_server.pm run  ".(defined $parsed_args{"imap_config"}? "--config=".$parsed_args{"imap_config"}: '--config=config.conf')."  --test=".$parsed_args{"test"};
+    print "tests_amount: $tests_amount\n";
+    my $cmd = "./fake_imap_server.pm run  ".(defined $parsed_args{"imap_config"}? 
+                    "--config=".$parsed_args{"imap_config"}: '--config=config.conf').
+                    "  --test=".$parsed_args{"test"};
     print "\$cmd: $cmd\n";
     system($cmd);
     
@@ -151,7 +156,7 @@ else {
 print "!! ".Dumper(\@test_result)."\n";
 #$tests_amount = $fake_imap_server->get_tests_amount();
 $check_all = ($#test_result + 1 <= 1? 0: 1);
-print "Res \$tests_amount = $tests_amount\n";
+print "Res \@test_result = @test_result,  \$tests_amount = $tests_amount\n";
 #$fake_imap_server->run();
 
 for (my $i = 0; $i < $tests_amount; $i++) {

@@ -25,7 +25,6 @@ exit() if $pid;
 die "Couldn't fork: $! " unless defined($pid);
 POSIX::setsid() or die "Can't start a new session $!";
 
-print "%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%          $$\n";
 sub print_help
 {
     print "Usage:\n";
@@ -39,7 +38,6 @@ sub print_help
 }
 
 my $argument = shift @ARGV;
-print "%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%          $$\n";
 if(defined $argument) {
     if ($argument eq 'run') {
         my %data;
