@@ -73,7 +73,7 @@ sub parse_test_file {
     my $is_test = 0;
     my $key;
 
-    $test_counter = 0;
+    $$test_counter = 0;
     while(<$fh>) {
         chomp $_; 
         s/\s*//;
@@ -111,7 +111,7 @@ sub parse_test_file {
                 push @test, @ar;
             }
             elsif ($is_test) {
-                $test_counter++;
+                $$test_counter++;
             }
         }
         elsif ($k == 2) {
@@ -227,10 +227,10 @@ my @test_result;
 #my $fake_imap_server;
 my $tests_amount = 0;
 my $check_all = 0;
-
+my $link_to_tests_amount = \$tests_amount;
 if (defined $parsed_args{"test"}) {
     print "is test\n";
-    parse_test_file($parsed_args{"test"},\@test_result, \$tests_amount);
+    parse_test_file($parsed_args{"test"},\@test_result, $link_to_tests_amount);
     print "tests_amount: $tests_amount\n";
     my $cmd = "./fake_imap_server.pm run  ".(defined $parsed_args{"imap_config"}? 
                     "--config=".$parsed_args{"imap_config"}: '--config=config.conf').
@@ -243,7 +243,7 @@ if (defined $parsed_args{"test"}) {
 else {
     #$fake_imap_server = fake_imap_server->new(config_file => (defined $parsed_args{"config_file"}? $parsed_args{"config_file"}: 'config.conf'));
     my $test_file =$fake_imap_server->get_test_file();
-    parse_test_file($test_file,\@test_result, \$tests_amount);
+    parse_test_file($test_file,\@test_result, $link_to_tests_amount);
 }
 print "!! ".Dumper(\@test_result)."\n";
 #$tests_amount = $fake_imap_server->get_tests_amount();
