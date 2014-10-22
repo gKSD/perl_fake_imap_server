@@ -4,6 +4,8 @@
 use IO::File;
 use Switch;
 use Data::Dumper;
+use DBI;
+use Time::HiRes qw(gettimeofday);
 
 sub print_help {
     print "Usage:\n";
@@ -131,6 +133,96 @@ sub parse_test_file {
     print "test_counter: $test_counter\n";
 }
 
+sub run_connect {
+    my $host = shift;
+    my $db_name = shift;
+    my $user = shift;
+    my $psw = shift;
+    my $dbh = DBI->connect("DBI:mysql:database=$db_name;host=$host",$user, $psw);
+    return $dbh;
+}
+
+sub create_collector {
+# just INSERT to rpop.imap
+    my $db = shift; 
+    my $UserID = shift; 
+    my $UserEmail = shift; 
+    my $Host = shift; 
+    my $User = shift; 
+    my $Password = shift; 
+    my $EncPassword = shift; 
+    my $Flags = shift; 
+    my $WaitTime = shift; 
+    my $Folder = shift; 
+    my $KeepTime = shift; 
+    my $Time = shift; 
+    my $LastTime = shift; 
+    my $LastMsg = shift; 
+    my $LastOK = shift; 
+    my $Port = shift; 
+    my $ConnectionMode = shift; 
+    my $Email = shift; 
+    my $AutoConfigure = shift; 
+    my $ContactFetchRetries = shift; 
+    my $OldThreshold = shift;
+
+    print "Params: ".$UserID.", ".$UserEmail.", ".$Host.", ".$User.", ".$Password.", ".$EncPassword.", ".$Flags.", ".
+                    $WaitTime.", ".$Folder.", ".$KeepTime.", ".$Time.", ".$LastTime.", ".$LastMsg.", ".$LastOK.", ".
+                    $Port.", ".$ConnectionMode.", ".$Email.", ".$AutoConfigure.", ".$ContactFetchRetries.", ".
+                    $OldThreshold."\n";
+
+    my $sth = $db->prepare("INSERT INTO rpop.imap (UserID,  UserEmail, Host, User, Password , EncPassword, Flags, WaitTime, Folder, KeepTime, Time, LastTime, LastMsg , LastOK  , Port, ConnectionMode,  Email,  AutoConfigure, ContactFetchRetries, OldThreshold) values (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)");
+    $sth->execute($UserID, $UserEmail, $Host, $User, $Password , $EncPassword, $Flags,
+                    $WaitTime, $Folder, $KeepTime, $Time, $LastTime, $LastMsg, $LastOK,
+                    $Port, $ConnectionMode, $Email, $AutoConfigure, $ContactFetchRetries,
+                    $OldThreshold) or die $DBI::errstr;
+    print "creating collector: ".Dumper($sth->{mysql_insertid})."\n";
+    $sth->finish();
+    return $sth->{mysql_insertid};
+}
+
+sub delete_collector {
+#just DELETE from rpop.imap
+
+    my $db = shift;
+    my $ID = shift;
+
+    my $sth = $db->prepare("DELETE FROM rpop.imap WHERE  ID=?");
+    $sth->execute($ID) or die $DBI::errstr;
+    print "Number of rows deleted :" + $sth->rows;
+    $sth->finish();
+}
+
+sub select_from_db_table_by_UserEmail{
+    my $dbh = shift;
+    my $UserEmail = shift;
+    my $statement = "select * from rpop.imap where UserEmail=?";
+    
+    my $sth = $dbh->prepare('select * from rpop.imap where UserEmail=?');
+    $sth->execute($UserEmail);
+    #my @result = $hash_ref->fetchrow_array();
+    #print "select: ".Dumper(\@result)."\n";
+    while (my @row = $sth->fetchrow_array()) {
+        print "row: ".Dumper(@row)."\n";
+    }
+    $sth->finish();
+}
+
+sub select_from_db_table_by_ID{
+    my $dbh = shift;
+    my $ID = shift;
+    my $statement = "select * from rpop.imap where ID=?";
+    
+    my $sth = $dbh->prepare('select * from rpop.imap where ID=?');
+    $sth->execute($ID);
+    #my @result = $hash_ref->fetchrow_array();
+    #print "select: ".Dumper(\@result)."\n";
+    while (my @row = $sth->fetchrow_array()) {
+        print "row: ".Dumper(@row)."\n";
+    }
+    $sth->finish();
+}
+
 my @test_result;
 #my $fake_imap_server;
 my $tests_amount = 0;
@@ -159,9 +251,17 @@ $check_all = ($#test_result + 1 <= 1? 0: 1);
 print "Res \@test_result = @test_result,  \$tests_amount = $tests_amount\n";
 #$fake_imap_server->run();
 
+my $db = run_connect('localhost', 'mysql', 'mpop', '');
+my $collector_id = create_collector($db, 1000021450, 'ksd001@mail.ru', 'localhost', 'test', 'test123456', '', 22,0,40,0,0, time(),
+                    '+[Success]', 0, 8877, 'no-ssl', 'test@localhost', 'yes', 3, time());
+select_from_db_table_by_UserEmail($db, 'ksd001@mail.ru');
+
+
 for (my $i = 0; $i < $tests_amount; $i++) {
     print "\$i = $i\n";
 }
+
+delete_collector($db, $collector_id);
 
 my $fh = IO::File->new("< /tmp/server.pid");
 if (defined $fh) {
