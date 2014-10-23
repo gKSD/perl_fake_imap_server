@@ -3,7 +3,7 @@ imap
     login
     {
         * CAPABILITY IMAP ID XLIST UIDPLUS UNSELECT MOVE
-        1 OK Authentication successful
+        OK Authentication successful
     }
 
     capability
@@ -11,7 +11,7 @@ imap
         * CAPABILITY IMAP
     
         * CAPABILITY ID XLIST UIDPLUS UNSELECT MOVE
-        2 OK CAPABILITY completed
+        OK CAPABILITY completed
     }
 }
 

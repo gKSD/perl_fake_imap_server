@@ -5,6 +5,32 @@ use JSON;
 use Data::Dumper;
 use strict;
 #=begin
+
+
+sub logger {
+    my ($sec,$min,$hour,$day,$mon,$year)=(localtime(time))[0,1,2,3,4,5];
+ 
+    SWITCH: {
+        #запись на открытие лог файла
+        if ($_[0] eq "0") {
+            open(LOG,">>log.txt");
+            printf LOG "$day.$mon.$year - Open log****************";
+            last SWITCH;
+        }
+        #запись на закрытие лог файла
+        if ($_[0] eq "1") {
+            printf LOG "$hour:$min:$sec - Close log*************************";
+            close(LOG);
+            last SWITCH;
+        }
+        #запись сообщение в логе
+        if ($_[0] eq "2") {
+            printf LOG "$hour:$min:$sec - $_[1]";last SWITCH;
+        }
+    }
+}
+
+
 sub some_proc {
     my $b = @_[1];
     print $b;

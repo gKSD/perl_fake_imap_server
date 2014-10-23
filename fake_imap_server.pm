@@ -15,6 +15,7 @@ use Data::Dumper;
 #use POSIX qw(setsid);
 use POSIX;
 use POSIX ":sys_wait_h";
+use Log::Log4perl qw(:easy);
 
 #use Proc::Daemon;
 #Proc::Daemon::Init;
@@ -35,6 +36,7 @@ sub print_help
 
     print "\n     --config [-c] =</dir/config_file>\n";
     print "     --test [-t] =</dir/test_file>\n";
+    print "     --mode [-m] =<config>\n";
 }
 
 my $argument = shift @ARGV;
@@ -54,6 +56,7 @@ if(defined $argument) {
                             case '-l' { $param = 'listen' }
                             case '-c' { $param = 'config' }
                             case '-t' { $param = 'test' }
+                            case '-m' { $param = 'mode' }
                         }
                         $data{$param} = $_;
                 }
@@ -82,6 +85,7 @@ if(defined $argument) {
    print_help();
    exit;
 }
+
 sub new {
     my $proto = shift;
     my $class = ref($proto) || $proto;
@@ -90,11 +94,12 @@ sub new {
     
     $self->{client} = undef;
     
-    print "Args: ".Dumper(scalar(keys %$args))."\n";
+    #$self->{logger}->debug( "Args: ".Dumper(scalar(keys %$args)));
     $self->{init_params} = undef;                       # $args;
     $self->{server} = undef;                            # хранит соединения
-    $self->{imap} = undef;                          # сценарий ответов
-    $self->{test} = undef;                             # хранение тестов
+    $self->{imap} = undef;                              # сценарий ответов
+    $self->{test} = undef;                              # хранение тестов
+    $self->{logger} = undef;
 
     bless $self, $class;
 
@@ -115,6 +120,11 @@ sub init
         $self->{init_params}->{$key} = $$args{$key};
     }
 
+
+    my $log_file = ($self->{init_params}->{log_file} ? $self->{init_params}->{log_file}: "fake_imap_server.log");
+    Log::Log4perl->easy_init({level => $DEBUG, file => ">> $log_file"});
+    $self->{logger} = get_logger();
+
     if (defined $self->{init_params}->{test}) {
         @{$self->{test}} = [];
         $self->parse_test_file($self->{init_params}->{test});
@@ -129,7 +139,7 @@ sub init
         }
     }
 
-    print "After all parse: ".Dumper($self)."\n"; 
+    $self->{logger}->debug("After all parse: ".Dumper($self));
 }
 
 sub run {
@@ -152,7 +162,7 @@ sub run {
 
     while ($self->{client} = $self->{server}->accept())
     {
-        $SIG{CHLD} = 'IGNORE'; 
+        $SIG{CHLD} = 'IGNORE';
         my $pid;
         while (not defined ($pid = fork()))
         {
@@ -174,18 +184,131 @@ sub run {
 sub process_request {
     my $self = shift;
     my $client = $self->{client};
-    warn "client connected to pid $$\n";
-    while(my $line = <$client>)
-    {
-        #print {$client} "sf";
- 
-        #print $self->{client}  $line;
-        #print $self->{client}  "pid $$ > ", $line;
+    my $mode = ($self->{init_params}->{"mode"} eq "config" ? 1: 0);
+    my $cmd_num;
 
-        print "client> ", $line;
-        print $client "pid $$ > ", $line;
+    $self->{logger}->debug("mode = $mode");
+
+    $self->{logger}->info("client connected to pid $$");
+    print $client "* OK Welcome to Fake Imap Server\r\n";
+
+    while(my $line = <$client>) {
+        chomp $line;
+        if ($line =~ /^\s*([\d\w]+)\s/) {
+            $cmd_num = $1;
+        }
+        else {
+            #not well formed command! error, die
+            #send something as an answer to client to inform that command is incorrect
+        }
+
+        $self->{logger}->debug("<<<: $line");
+
+        if ($line =~ /login/i) {
+            if ($mode) {
+                my $n = $#{$self->{imap}->{login}} + 1;
+                for (my $i = 0; $i < $n; $i++) {
+                    my $answer = $self->{imap}->{login}[$i];
+                    $self->{logger}->debug(">>>: $answer");
+
+                    if ($i == $n - 1) {
+                        $self->tagged_send($answer, $cmd_num);
+                        next;
+                    }
+                    $self->notagged_send($answer);
+                }
+            }
+            else {
+                $self->{logger}->debug(">>>: OK LOGIN completed");
+                $self->tagged_send("OK LOGIN completed", $cmd_num);
+            }
+        }
+        elsif ($line =~ /capability/i) {
+
+        }
+        elsif ($line =~ /noop/i)
+        {}
+        elsif ($line =~ /select/i)
+        {}
+        elsif ($line =~ /status/i)
+        {}
+        elsif ($line =~ /fetch/i)
+        {}
+        elsif ($line =~ /id/i)
+        {}
+        elsif ($line =~ /examine/i)
+        {}
+        elsif ($line =~ /create/i)
+        {}
+        elsif ($line =~ /delete/i)
+        {}
+        elsif ($line =~ /rename/i)
+        {}
+        elsif ($line =~ /subscribe/i)
+        {}
+        elsif ($line =~ /unsubscribe/i)
+        {}
+        elsif ($line =~ /list/i)
+        {}
+        elsif ($line =~ /xlist/i)
+        {}
+        elsif ($line =~ /lsub/i)
+        {}
+        elsif ($line =~ /append/i)
+        {}
+        elsif ($line =~ /check/i)
+        {}
+        elsif ($line =~ /unselect/i)
+        {}
+        elsif ($line =~ /expunge/i)
+        {}
+        elsif ($line =~ /search/i)
+        {}
+        elsif ($line =~ /store/i)
+        {}
+        elsif ($line =~ /copy/i)
+        {}
+        elsif ($line =~ /move/i)
+        {}
+        elsif ($line =~ /close/i)
+        {}
+
+        #$self->{logger}->debug( "client> ".$line);
+        #print $client "pid $$ > ".$line."\r\n";
     }
     exit 0;
+}
+
+sub tagged_send
+{
+    my $self = shift;
+    my $str = $_[0];
+    my $num = $_[1];
+    my $client = $self->{client};
+
+    eval {print $client "$num $str\r\n";};
+    if ($@) {
+        $self->{logger}->error("Tagged command send error");
+    }
+}
+
+sub notagged_send
+{
+    my $self = shift;
+    my $str = $_[0];
+    my $client = $self->{client};
+
+    eval {
+        if ($str =~ /^\*/) {
+            print $client "$str\r\n";
+        }
+        else {
+            print $client "* $str\r\n";
+        }
+    };
+    if ($@) {
+        $self->{logger}->error("Untagged command send error");
+    }
 }
 
 sub get_test_file {
@@ -226,7 +349,7 @@ sub parse_test_file {
             $k++;
             next;
         }
-        
+
         if (/\}/) {
             $k--;
             if ($k == 0) {
@@ -235,7 +358,7 @@ sub parse_test_file {
             }
             next;
         }
-        
+
         if (/^$/) {
             next;
         }
@@ -258,11 +381,11 @@ sub parse_test_file {
                     or $key eq 'unsubscribe' or $key eq 'list' or $key eq 'xlist' or $key eq 'lsub'
                     or $key eq 'append' or $key eq 'check' or $key eq 'unselect' or $key eq 'expunge'
                     or $key eq 'search' or $key eq 'store' or $key eq 'copy' or $key eq 'move'
-                    or $key eq 'close') {
+                    or $key eq 'close' or $key eq 'logout') {
                     warn "invalid key in imap part in $test_file\n";
                 }
                 my @ar;
-                @{$imap{$_}} = @ar; 
+                @{$imap{$_}} = @ar;
             }
             elsif ($is_test) {
                 my @ar = [];
@@ -280,7 +403,7 @@ sub parse_test_file {
                     my %hash = ();
                     my @ar = split (/, */, $value);
 
-                    @{$hash{$key1}} = @ar; 
+                    @{$hash{$key1}} = @ar;
                     push @{$test[-1]}, \%hash;
                 }
             }
@@ -289,7 +412,7 @@ sub parse_test_file {
     if ($k != 0) {
         die "syntax error in $test_file (check '{' and '}' amount)\n";
     }
-    
+
     $fh->close();
     $self->{test} = \@test;
     $self->{imap} = \%imap;
@@ -308,8 +431,8 @@ sub parse_file_with_test {
     my @test_array;
     while(<$fh>) {
         chomp $_;
-        
-        s/\s*//; 
+
+        s/\s*//;
         if (/\{/) {
             $k++;
             next;
@@ -335,7 +458,7 @@ sub parse_file_with_test {
                 my @ar = split (/, */, $value);
 
                 @{$hash{$key}} = @ar;
-               
+
                 push @{$test_array[-1]}, \%hash;
                 #if (my @ar = $value =~ /([\w]*[, ]*)*([\w]*)/) {
                 #    print "ar: ".Dumper(@ar)."\n";
@@ -408,8 +531,6 @@ sub parse_config
     my $self = shift;
     my $config_file = shift;
 
-    print "$config_file\n";
-
     #open FILE, $config_file or return;
     my $fh = new IO::File;
     unless ($fh->open("< $config_file"))
@@ -462,63 +583,7 @@ sub parse_config
     }
     #close FILE;
     $fh->close;
-    
-### May use YAML
-### my $config = Config::YAML->new( config => $config_file );
-### print Dumper( $config );
 
 }
 
-=begin
-        if (/login/i)
-        {}
-        elsif (/capability/i)
-        {}
-        elsif (/noop/i)
-        {}
-        elsif (/select/i)
-        {}
-        elsif (/status/i)
-        {}
-        elsif (/fetch/i)
-        {}
-        elsif (/id/i)
-        {}
-        elsif (/examine/i)
-        {}
-        elsif (/create/i)
-        {}
-        elsif (/delete/i)
-        {}
-        elsif (/rename/i)
-        {}
-        elsif (/subscribe/i)
-        {}
-        elsif (/unsubscribe/i)
-        {}
-        elsif (/list/i)
-        {}
-        elsif (/xlist/i)
-        {}
-        elsif (/lsub/i)
-        {}
-        elsif (/append/i)
-        {}
-        elsif (/check/i)
-        {}
-        elsif (/unselect/i)
-        {}
-        elsif (/expunge/i)
-        {}
-        elsif (/search/i)
-        {}
-        elsif (/store/i)
-        {}
-        elsif (/copy/i)
-        {}
-        elsif (/move/i)
-        {}
-        elsif (/close/i)
-        {}
-=cut
 1;

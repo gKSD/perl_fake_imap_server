@@ -1,6 +1,5 @@
 #!/usr/bin/perl -I/home/sofia/mailru/perl_fake_imap_server
 
-#use fake_imap_server;
 use IO::File;
 use Switch;
 use Data::Dumper;
@@ -14,10 +13,32 @@ sub print_help {
     print "  optional: \n";
     print "    --imap_config [-c] =</dir/config_file>\n";
     print "    --help [-h]\n";
+    print "\nCollector params (for rpop.imap table):\n";
+    print "    --UserID=<user_id>\n";
+    print "    --UserEmail=<user_email>\n";
+    print "    --Host=<imap_srever_host>\n";
+    print "    --Email=<email>";
+    print "    --User=<user name (default: same with Email)>\n";
+    print "    --Password=<password>\n";
+    print "    --Flags=<collector flags>\n";
+    print "    --Folder=<folder id for collecting inbox letters>\n";
+    print "    --Port=<imap server port>\n";
+    print "    --ConnectionMode=<ssl|no-ssl>\n";
+    print "    --AutoConfigure=<yes|no>\n";
+    print "    --ContactFetchRetries=<number of retries>\n";
+    print "\n Mysql params: \n";
+    print "    --mysql_host=<host>\n";
+    print "    --mysql_user=<username>\n";
+    print "    --mysql_password=<password>\n";
 }
 
 my $args = shift @ARGV;
 my %parsed_args;
+
+#default values, may be changed while parsing config or ARGV
+$parsed_args{"mysql_host"} = "localhost";
+$parsed_args{"mysql_user"} = "mpop";
+$parsed_args{"mysql_password"} = '';
 
 if (defined $args) {
     if ($args eq '-h' or $args eq '--help') {
@@ -26,7 +47,7 @@ if (defined $args) {
     }
     else {
         while(defined $args) {
-            if (my @fields = $args =~ /^\-\-(\w+)\=([\w\.\/]+)$/g) {
+            if (my @fields = $args =~ /^\-\-(\w+)\=([\w\.\/@]+)$/g) {
                 $parsed_args{$fields[0]} = $fields[1];
             }
             elsif ($args =~ /^\-[hplcts]$/g) {
@@ -133,37 +154,119 @@ sub parse_test_file {
     print "test_counter: $test_counter\n";
 }
 
+sub check_collector_params {
+    my $db = shift;
+    my $params = shift;
+
+    $params->{"OldThreshold"} = time();
+    $params->{"LastTime"} = time();
+
+    unless (exists($params->{"UserEmail"}) or exists($params->{"UserID"})) {
+        die "UserID or UserEmail must be set \n";
+    }
+    unless (exists($params->{"Email"}) and exists($params->{"Password"})) {
+        die "Email and Password must be set \n";
+    }
+
+    unless (exists($params->{"UserID"})) {
+        my $sth = $db->prepare('select ID from mPOP.user where Username=?');
+
+        my $Username = $params->{"UserEmail"};
+        if ($params->{"UserEmail"} =~ /^(\w+)\@mail\.ru$/) {
+            $Username = $1;
+        }
+
+        $sth->execute($Username);
+        $params->{"UserID"} = $sth->fetchrow_hashref()->{"ID"};
+   } else {
+        unless (exists($params->{"UserEmail"})) {
+            my $sth = $db->prepare('select Username from mPOP.user where ID=?');
+            $sth->execute($params->{"UserID"});
+            my $result = $sth->fetchrow_hashref()->{"Username"};
+            unless ($result =~ /^(\w+)\@mail\.ru$/) {
+                $result .= "\@mail.ru";
+            }
+            $params->{"UserEmail"} = $result;
+        }
+    }
+    unless (exists($params->{"Host"})) {
+        $params->{"Host"} = "localhost";
+    }
+
+    unless (exists($params->{"User"})) {
+        $params->{"User"} = $params->{"Email"};
+    }
+    unless (exists($params->{"EncPassword"})) {
+        $params->{"EncPassword"} = "";
+    }
+    unless (exists($params->{"Flags"})) {
+        $params->{"Flags"} = 22;
+    }
+    unless (exists($params->{"WaitTime"})) {
+        $params->{"WaitTime"} = 0;
+    }
+    unless (exists($params->{"KeepTime"})) {
+        $params->{"KeepTime"} = 0;
+    }
+    unless (exists($params->{"Time"})) {
+        $params->{"Time"} = 0;
+    }
+    unless (exists($params->{"LastMsg"})) {
+        $params->{"LastMsg"} = "+[Success]";
+    }
+    unless (exists($params->{"LastOK"})) {
+        $params->{"LastOK"} = 0;
+    }
+    unless (exists($params->{"Port"})) {
+        $params->{"Port"} = "8877";
+    }
+    unless (exists($params->{"ConnectionMode"})) {
+        $params->{"ConnectionMode"} = "no-ssl";
+    }
+    unless (exists($params->{"AutoConfigure"})) {
+        $params->{"AutoConfigure"} = "no";
+    }
+    unless (exists($params->{"ContactFetchRetries"})) {
+        $params->{"ContactFetchRetries"} = 0;
+    }
+    unless (exists($params->{"Folder"})) {
+        $params->{"Folder"} = "0";
+    }
+}
+
 sub run_connect {
     my $host = shift;
     my $db_name = shift;
     my $user = shift;
     my $psw = shift;
-    my $dbh = DBI->connect("DBI:mysql:database=$db_name;host=$host",$user, $psw);
+    print "DB params: $db_name, $host, $user, $psw\n";
+    my $dbh = DBI->connect("DBI:mysql:database=$db_name;host=$host",$user, $psw)
+        or die "can't connect to mysql server\n";
     return $dbh;
 }
 
 sub create_collector {
 # just INSERT to rpop.imap
-    my $db = shift; 
-    my $UserID = shift; 
-    my $UserEmail = shift; 
-    my $Host = shift; 
-    my $User = shift; 
-    my $Password = shift; 
-    my $EncPassword = shift; 
-    my $Flags = shift; 
-    my $WaitTime = shift; 
-    my $Folder = shift; 
-    my $KeepTime = shift; 
-    my $Time = shift; 
-    my $LastTime = shift; 
-    my $LastMsg = shift; 
-    my $LastOK = shift; 
-    my $Port = shift; 
-    my $ConnectionMode = shift; 
-    my $Email = shift; 
-    my $AutoConfigure = shift; 
-    my $ContactFetchRetries = shift; 
+    my $db = shift;
+    my $UserID = shift;
+    my $UserEmail = shift;
+    my $Host = shift;
+    my $User = shift;
+    my $Password = shift;
+    my $EncPassword = shift;
+    my $Flags = shift;
+    my $WaitTime = shift;
+    my $Folder = shift;
+    my $KeepTime = shift;
+    my $Time = shift;
+    my $LastTime = shift;
+    my $LastMsg = shift;
+    my $LastOK = shift;
+    my $Port = shift;
+    my $ConnectionMode = shift;
+    my $Email = shift;
+    my $AutoConfigure = shift;
+    my $ContactFetchRetries = shift;
     my $OldThreshold = shift;
 
     print "Params: ".$UserID.", ".$UserEmail.", ".$Host.", ".$User.", ".$Password.", ".$EncPassword.", ".$Flags.", ".
@@ -171,7 +274,10 @@ sub create_collector {
                     $Port.", ".$ConnectionMode.", ".$Email.", ".$AutoConfigure.", ".$ContactFetchRetries.", ".
                     $OldThreshold."\n";
 
-    my $sth = $db->prepare("INSERT INTO rpop.imap (UserID,  UserEmail, Host, User, Password , EncPassword, Flags, WaitTime, Folder, KeepTime, Time, LastTime, LastMsg , LastOK  , Port, ConnectionMode,  Email,  AutoConfigure, ContactFetchRetries, OldThreshold) values (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)");
+    my $sth = $db->prepare("INSERT INTO rpop.imap (UserID,  UserEmail, Host, User, Password , EncPassword,
+                            Flags, WaitTime, Folder, KeepTime, Time, LastTime, LastMsg, LastOK, Port,
+                            ConnectionMode,  Email,  AutoConfigure, ContactFetchRetries, OldThreshold)
+                            values (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)");
     $sth->execute($UserID, $UserEmail, $Host, $User, $Password , $EncPassword, $Flags,
                     $WaitTime, $Folder, $KeepTime, $Time, $LastTime, $LastMsg, $LastOK,
                     $Port, $ConnectionMode, $Email, $AutoConfigure, $ContactFetchRetries,
@@ -189,7 +295,7 @@ sub delete_collector {
 
     my $sth = $db->prepare("DELETE FROM rpop.imap WHERE  ID=?");
     $sth->execute($ID) or die $DBI::errstr;
-    print "Number of rows deleted :" + $sth->rows;
+    print "Number of rows deleted: ".$sth->rows."\n";
     $sth->finish();
 }
 
@@ -197,14 +303,19 @@ sub select_from_db_table_by_UserEmail{
     my $dbh = shift;
     my $UserEmail = shift;
     my $statement = "select * from rpop.imap where UserEmail=?";
-    
+
     my $sth = $dbh->prepare('select * from rpop.imap where UserEmail=?');
     $sth->execute($UserEmail);
     #my @result = $hash_ref->fetchrow_array();
     #print "select: ".Dumper(\@result)."\n";
-    while (my @row = $sth->fetchrow_array()) {
-        print "row: ".Dumper(@row)."\n";
-    }
+
+    #while (my @row = $sth->fetchrow_array()) {
+    #    print "row: ".Dumper(@row)."\n";
+    #}
+
+    my $result = $sth->fetchrow_hashref();
+    print "Value returned: ".Dumper($result->{ID})."\n";
+
     $sth->finish();
 }
 
@@ -212,71 +323,73 @@ sub select_from_db_table_by_ID{
     my $dbh = shift;
     my $ID = shift;
     my $statement = "select * from rpop.imap where ID=?";
-    
+
     my $sth = $dbh->prepare('select * from rpop.imap where ID=?');
     $sth->execute($ID);
-    #my @result = $hash_ref->fetchrow_array();
-    #print "select: ".Dumper(\@result)."\n";
-    while (my @row = $sth->fetchrow_array()) {
-        print "row: ".Dumper(@row)."\n";
-    }
+
+    my $result = $sth->fetchrow_hashref();
+    print "Value returned: ".Dumper($result->{ID})."\n";
+
     $sth->finish();
 }
 
+sub my_exit {
+    my $db = shift;
+    my $collector_id = shift;
+    delete_collector($db, $collector_id);
+
+    my $fh = IO::File->new("< /tmp/server.pid");
+    if (defined $fh) {
+        my $line = <$fh>;
+        chomp $line;
+        print "PID = $line\n";
+        kill 9, $line;
+    }
+}
+
 my @test_result;
-#my $fake_imap_server;
 my $tests_amount = 0;
-my $check_all = 0;
+my $check_all = 0; #flag
 my $link_to_tests_amount = \$tests_amount;
+my $db = run_connect($parsed_args{'mysql_host'}, 'mysql', $parsed_args{'mysql_user'}, $parsed_args{'mysql_password'});
+
+check_collector_params($db,\%parsed_args);
+
+my $collector_id = create_collector($db, $parsed_args{"UserID"}, $parsed_args{"UserEmail"},
+                                    $parsed_args{"Host"}, $parsed_args{"User"}, $parsed_args{"Password"},
+                                    $parsed_args{"EncPassword"},$parsed_args{"Flags"},$parsed_args{"WaitTime"},
+                                    $parsed_args{"Folder"}, $parsed_args{"KeepTime"}, $parsed_args{"Time"},
+                                    $parsed_args{"LastTime"}, $parsed_args{"LastMsg"}, $parsed_args{"LastOK"},
+                                    $parsed_args{"Port"}, $parsed_args{"ConnectionMode"},$parsed_args{"Email"},
+                                    $parsed_args{"AutoConfigure"}, $parsed_args{"ContactFetchRetries"},
+                                    $parsed_args{"OldTreshold"});
+select_from_db_table_by_UserEmail($db, 'ksd001@mail.ru');
+
 if (defined $parsed_args{"test"}) {
-    print "is test\n";
     parse_test_file($parsed_args{"test"},\@test_result, $link_to_tests_amount);
-    print "tests_amount: $tests_amount\n";
     my $cmd = "./fake_imap_server.pm run  ".(defined $parsed_args{"imap_config"}? 
                     "--config=".$parsed_args{"imap_config"}: '--config=config.conf').
                     "  --test=".$parsed_args{"test"};
-    print "\$cmd: $cmd\n";
     system($cmd);
-    
-    #$fake_imap_server = fake_imap_server->new(config_file => (defined $parsed_args{"config_file"}? $parsed_args{"config_file"}: 'config.conf'), test => $parsed_args{"test"});
 }
 else {
-    #$fake_imap_server = fake_imap_server->new(config_file => (defined $parsed_args{"config_file"}? $parsed_args{"config_file"}: 'config.conf'));
-    my $test_file =$fake_imap_server->get_test_file();
-    parse_test_file($test_file,\@test_result, $link_to_tests_amount);
+    my_exit($db, $collector_id);
+    die "file with test is undefined\n";
+    #parse_test_file($test_file,\@test_result, $link_to_tests_amount);
 }
-print "!! ".Dumper(\@test_result)."\n";
-#$tests_amount = $fake_imap_server->get_tests_amount();
+
 $check_all = ($#test_result + 1 <= 1? 0: 1);
 print "Res \@test_result = @test_result,  \$tests_amount = $tests_amount\n";
-#$fake_imap_server->run();
-
-my $db = run_connect('localhost', 'mysql', 'mpop', '');
-my $collector_id = create_collector($db, 1000021450, 'ksd001@mail.ru', 'localhost', 'test', 'test123456', '', 22,0,40,0,0, time(),
-                    '+[Success]', 0, 8877, 'no-ssl', 'test@localhost', 'yes', 3, time());
-select_from_db_table_by_UserEmail($db, 'ksd001@mail.ru');
 
 
-for (my $i = 0; $i < $tests_amount; $i++) {
-    print "\$i = $i\n";
-}
+#for (my $i = 0; $i < $tests_amount; $i++) {
+    #my $cmd = "~/mpop/src/rimap/BUILD/sheduler --proto=imap --id=$collector_id &";
+    #system($cmd);
 
-delete_collector($db, $collector_id);
+    $cmd = "~/mpop/src/rimap/BUILD/collector --proto=imap --fetch-id=$collector_id --log=imap -l 5";
+    system($cmd);
+#}
 
-my $fh = IO::File->new("< /tmp/server.pid");
-if (defined $fh) {
-    my $line = <$fh>;
-    chomp $line;
-    print "PID = $line\n";
-    kill 9, $line;
-}
+my_exit($db, $collector_id);
+
 1;
-
-
-=begin
-use FakeImapServer;
-
-our $fake_imap_server = FakeImapServer->new(conf_file => 'config.conf');
-
-$fake_imap_server->run();
-=cut
