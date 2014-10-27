@@ -1,81 +1,82 @@
-imap
+{
+imap:
 {
     login:
     {
-        * CAPABILITY IMAP ID XLIST UIDPLUS UNSELECT MOVE
-        OK Authentication successful
+        "* CAPABILITY IMAP ID XLIST UIDPLUS UNSELECT MOVE",
+        "OK Authentication successful"
     }
     capability
     {
-        * CAPABILITY IMAP
-    
-        * CAPABILITY ID XLIST UIDPLUS UNSELECT MOVE
-        OK CAPABILITY completed
+        "* CAPABILITY IMAP",
+        "* CAPABILITY ID XLIST UIDPLUS UNSELECT MOVE",
+        "OK CAPABILITY completed"
     }
 }
 
-test
+test:
 {
-    1
+    1:
      {
-        Inbox: 
+        Inbox:
         {
-            uids 
+            uids :
             [
-                001 [recent],
+                001: [recent],
                 002,
-                003 [recent],
-                005 [recent]
+                003: [recent],
+                005: [recent]
             ]
-            flags [ hashnochildren, noselect]
-            uidvalidity (13123)
+            flags: [ hashnochildren, noselect]
+            uidvalidity : {13123}
         }
-        test
+        test:
         {
-            uids
+            uids:
             [
-                10 [recent],
-                11 [recent],
+                10: [recent],
+                11: [recent],
                 12
             ]
         }
      }
-    2
+    2:
      {
-        inbox
+        inbox:
         {
-            uids 
+            uids :
             [
-                002 [seen,answered],
-                005
+                002: [seen,answered],
+                005:
                 [
                     seen,
                     answered,
-#09-Jul-2014 09:21:57 +0000
+                    "09-Jul-2014 09:21:57 +0000"
                 ],
                 003
             ]
         }
-        test
+        test:
         {
             uids: [10]
         }
      }
 }
 
-result
+result:
 {
-    1
+    1:
      {
         qqqq
      }
-    2
+    2:
      {
         qqqq
      }
-    total
+    total:
      {
         inbox: [002, 005]
         test: [10]
      }
+}
 }

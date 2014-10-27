@@ -641,12 +641,23 @@ sub parse_test_file {
                     my $value = $2;
                     my @ar = split (/, */, $value);
 
-                    @{$test[-1]->{$folder_name}->{$key1}} = @ar;
+                    #@{$test[-1]->{$folder_name}->{$key1}} = @ar;
+                    if ($key1 eq "flags") {
+                        @{$test[-1]->{$folder_name}->{$key1}} = @ar;
+                    }
+                    elsif ($key1 eq "uids") {
+                        my %hash;
+                        foreach my $it (@ar) {
+                            my @attr;
+                            @{$hash{it}} = @attr;
+                        }
+                        %{$test[-1]->{$folder_name}->{$key1}} = %hash;
+                    }
                     $folder_attribute = $key1;
                 }
                 elsif (/^(\w+)[:\s]*$/) {
-                    my @ar;
-                    @{$test[-1]->{$folder_name}->{$1}} = @ar;
+                    my %hash;
+                    %{$test[-1]->{$folder_name}->{$1}} = %hash;
                     $folder_attribute = $1;
                 }
             }
@@ -657,13 +668,12 @@ sub parse_test_file {
                     my $key1 = $1;
                     my $value = $2;
                     my @ar = split (/, */, $value);
-                    my %hash = ($key1 => \@ar);
-                    push @{$test[-1]->{$folder_name}->{$folder_attribute}}, \%hash;
+                    @{$test[-1]->{$folder_name}->{$folder_attribute}->{$key1}} = @ar;
+                    $uid = $key1;
                 }
                 elsif (/^(\w+)[:\s]*$/) {
                     my @ar;
-                    my %hash = ($1 => \@ar);
-                    push @{$test[-1]->{$folder_name}->{$folder_attribute}}, \%hash;
+                    @{$test[-1]->{$folder_name}->{$folder_attribute}->{$1}} = @ar;
                     $uid = $1;
                 }
            }
@@ -672,7 +682,7 @@ sub parse_test_file {
             if ($is_test) {
                 /^(\w+)\,*$/;
                 $self->{logger}->debug("123 ".Dumper(@{$test[-1]->{$folder_name}->{$folder_attribute}}[-1]->{$uid}));
-                push @{@{$test[-1]->{$folder_name}->{$folder_attribute}}[-1]->{$uid}}, $1;
+                push @{$test[-1]->{$folder_name}->{$folder_attribute}->{$uid}}, $1;
             }
         }
     }

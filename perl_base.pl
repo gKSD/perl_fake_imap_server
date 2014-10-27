@@ -99,4 +99,20 @@ print "123";
 
     print "TEST end\n";
 ### TESTTTTTTTTTTTTTTT
+
+
+open( my $fh, '<', 'tests/test2' );
+my $json_text   = <$fh>;
+my $perl_scalar = decode_json( $json_text );
+
+print "\n\n ************************************* JSON *******************************************\n\n";
+print Dumper($perl_scalar);
+
+sub decodeJSON {
+    my ($JSONText) = @_;
+    my $hashRef = decode_json($JSONText);
+    return @$hashRef;
+}
+
+
 1;
