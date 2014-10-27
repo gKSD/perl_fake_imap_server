@@ -239,7 +239,7 @@ sub parse_test_file1 {
 
 
 #parse_test_file("tests/test3");
-parse_test_file1("tests/test2");
+parse_test_file1("tests/test4");
 
 
 sub func2 {
