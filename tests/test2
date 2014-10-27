@@ -1,11 +1,10 @@
 imap
 {
-    login
+    login:
     {
         * CAPABILITY IMAP ID XLIST UIDPLUS UNSELECT MOVE
         OK Authentication successful
     }
-
     capability
     {
         * CAPABILITY IMAP
@@ -19,13 +18,48 @@ test
 {
     1
      {
-        inbox: [001, 002, 003, 005]
-        test: [10, 11, 12]
+        Inbox: 
+        {
+            uids 
+            [
+                001 [recent],
+                002,
+                003 [recent],
+                005 [recent]
+            ]
+            flags [ hashnochildren, noselect]
+            uidvalidity (13123)
+        }
+        test
+        {
+            uids
+            [
+                10 [recent],
+                11 [recent],
+                12
+            ]
+        }
      }
     2
      {
-        inbox: [002, 005]
-        test: [10]
+        inbox
+        {
+            uids 
+            [
+                002 [seen,answered],
+                005
+                [
+                    seen,
+                    answered,
+#09-Jul-2014 09:21:57 +0000
+                ],
+                003
+            ]
+        }
+        test
+        {
+            uids: [10]
+        }
      }
 }
 

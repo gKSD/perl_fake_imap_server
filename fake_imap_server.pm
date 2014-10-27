@@ -100,6 +100,7 @@ sub new {
     $self->{imap} = undef;                              # сценарий ответов
     $self->{test} = undef;                              # хранение тестов
     $self->{logger} = undef;
+    $self->{connection_number} = 0;
 
     bless $self, $class;
 
@@ -184,7 +185,10 @@ sub run {
 sub process_request {
     my $self = shift;
     my $client = $self->{client};
-    my $mode = ($self->{init_params}->{"mode"} eq "config" ? 1: 0);
+    my $mode = 0;
+    if ($self->{init_params}) {
+        $mode = ($self->{init_params}->{"mode"} eq "config" ? 1: 0);
+    }
     my $cmd_num;
 
     $self->{logger}->debug("mode = $mode");
@@ -194,7 +198,7 @@ sub process_request {
 
     while(my $line = <$client>) {
         chomp $line;
-        if ($line =~ /^\s*([\d\w]+)\s/) {
+        if ($line =~ /^\s*(\w+)\s/) {
             $cmd_num = $1;
         }
         else {
@@ -206,32 +210,128 @@ sub process_request {
 
         if ($line =~ /login/i) {
             if ($mode) {
-                my $n = $#{$self->{imap}->{login}} + 1;
-                for (my $i = 0; $i < $n; $i++) {
-                    my $answer = $self->{imap}->{login}[$i];
-                    $self->{logger}->debug(">>>: $answer");
-
-                    if ($i == $n - 1) {
-                        $self->tagged_send($answer, $cmd_num);
+                if ($self->{imap}->{login}) {
+                    if ($self->send_answer_from_config($self->{imap}->{login}, $cmd_num)) {
                         next;
                     }
-                    $self->notagged_send($answer);
+=begin
+                    my $n = $#{$self->{imap}->{login}} + 1;
+                    if ($n > 0) {
+                        for (my $i = 0; $i < $n; $i++) {
+                            my $answer = $self->{imap}->{login}[$i];
+                            $self->{logger}->debug(">>>: $answer");
+
+                            if ($i == $n - 1) {
+                                $self->tagged_send($answer, $cmd_num);
+                                next;
+                            }
+                            $self->notagged_send($answer);
+                        }
+                        next;
+                    }
+=cut
                 }
             }
-            else {
-                $self->{logger}->debug(">>>: OK LOGIN completed");
-                $self->tagged_send("OK LOGIN completed", $cmd_num);
-            }
+            $self->{logger}->debug(">>>: OK LOGIN completed");
+            $self->tagged_send("OK LOGIN completed", $cmd_num);
         }
         elsif ($line =~ /capability/i) {
+            if ($mode) {
+                if ($self->{imap}->{capability}) {
+                    if ($self->send_answer_from_config($self->{imap}->{capability}, $cmd_num)) {
+                        next;
+                    }
+                }
+            }
+            $self->{logger}->debug(">>>: CAPABILITY IDLE NAMESPACE");
+            $self->{logger}->debug(">>>: OK capability complited");
+
+            $self->notagged_send("CAPABILITY IDLE NAMESPACE");
+            $self->tagged_send("OK capability complited", $cmd_num);
+        }
+        elsif ($line =~ /namespace/i) {
+            if ($mode) {
+                if ($self->{imap}->{namespace}) {
+                    if ($self->send_answer_from_config($self->{imap}->{namespace}, $cmd_num)) {
+                        next;
+                    }
+                }
+
+            }
+            $self->{logger}->debug(">>>: NAMESPACE ((\"INBOX.\" \".\")) NIL NIL");
+            $self->{logger}->debug(">>>: OK Namespace complited");
+
+            $self->notagged_send("NAMESPACE ((\"INBOX.\" \".\")) NIL NIL");
+            $self->tagged_send("OK Namespace complited", $cmd_num);
+        }
+        elsif ($line =~ /noop/i) {
+            if ($mode) {
+                if ($self->{imap}->{noop}) {
+                    if ($self->send_answer_from_config($self->{imap}->{noop}, $cmd_num)) {
+                        next;
+                    }
+                }
+            }
+            $self->{logger}->debug(">>>: OK NOOP completed");
+            $self->tagged_send("OK NOOP completed", $cmd_num);
+        }
+        elsif ($line =~ /list/i) {
+            #same with xlist
+            if ($mode) {
+                if ($self->{imap}->{list}) {
+                    if ($self->send_answer_from_config($self->{imap}->{list}, $cmd_num)) {
+                        next;
+                    }
+                }
+                elsif ($self->{imap}->{xlist}) {
+                    if ($self->send_answer_from_config($self->{imap}->{xlist}, $cmd_num)) {
+                        next;
+                    }
+                }
+                if ($self->run_cmd_list($cmd_num)) {
+                    next;
+                }
+            }
+            $self->notagged_send("LIST (\\trash) \"/\" Trash");
+            $self->notagged_send("LIST (\\sent) \"/\" Sent");
+            $self->notagged_send("LIST (\\inbox) \"/\" Inbox");
+            $self->notagged_send("LIST (\\junk) \"/\" Junk");
+            $self->tagged_send("OK LIST Completed", $cmd_num);
+        }
+        elsif ($line =~ /logout/i) {
+            if ($mode) {
+                if ($self->{imap}->{logout}) {
+                    if ($self->send_answer_from_config($self->{imap}->{logout}, $cmd_num)) {
+                        next;
+                    }
+                }
+            }
+            $self->notagged_send("BYE Fake Imap Server logging out");
+            $self->tagged_send("OK LOGOUT completed", $cmd_num);
+        }
+        elsif ($line =~ /status/i) {
+            if ($mode) {
+                if ($self->{imap}->{status}) {
+                    if ($self->send_answer_from_config($self->{imap}->{status}, $cmd_num)) {
+                        next;
+                    }
+                }
+                if ($self->run_cmd_status($cmd_num, $line)) {
+                    next;
+                }
+            }
+            if ($line =~ /inbox/i) {
+                $self->notagged_send("LIST (\\trash) \"/\" Trash");
+            }
+            else {
+                $self->notagged_send("LIST (\\sent) \"/\" Sent");
+            }
+            $self->tagged_send("OK LIST Completed", $cmd_num);
 
         }
-        elsif ($line =~ /noop/i)
-        {}
-        elsif ($line =~ /select/i)
-        {}
-        elsif ($line =~ /status/i)
-        {}
+        elsif ($line =~ /select/i) {
+            
+        }
         elsif ($line =~ /fetch/i)
         {}
         elsif ($line =~ /id/i)
@@ -247,10 +347,6 @@ sub process_request {
         elsif ($line =~ /subscribe/i)
         {}
         elsif ($line =~ /unsubscribe/i)
-        {}
-        elsif ($line =~ /list/i)
-        {}
-        elsif ($line =~ /xlist/i)
         {}
         elsif ($line =~ /lsub/i)
         {}
@@ -276,7 +372,78 @@ sub process_request {
         #$self->{logger}->debug( "client> ".$line);
         #print $client "pid $$ > ".$line."\r\n";
     }
+    ### TODO: надо сбростиь  $self->{connection_number} = 0;
     exit 0;
+}
+
+sub run_cmd_list() {
+    my $self = shift;
+    my $cmd_num = shift;
+    my %folders = %{$self->{test}[$self->{connection_number}]};
+    unless (%folders) {return -1;}
+    foreach my $folder (keys %folders){
+        my $answer = "* XLIST (";
+        foreach my $flag (@{$folders{$folder}{"flags"}}) {
+            unless ($answer =~ /\($/) {
+                $answer .= " ";
+            }
+            $answer .= "\\$flag";
+        }
+        $answer .= ") \"/\" \"$folder\"";
+        $self->notagged_send($answer);
+        $self->{logger}->debug(">>>: $answer");
+    }
+    $self->tagged_send("OK LIST completed", $cmd_num);
+    $self->{logger}->debug(">>>: OK LIST completed");
+    return 1;
+}
+
+sub run_cmd_status {
+    my $self = shift;
+    my $cmd_num = shift;
+    my $status = shift;
+
+    my %folders = %{$self->{test}[$self->{connection_number}]};
+    unless (%folders) {return -1;}
+
+    if ($status =~ /^\w+\s+STATUS\s+(.+)\s+\((.*)\)\s*$/i) {
+        my $answer = "STATUS ";
+        my $need_space = 0;
+        my $folder = $1;
+        my $flags = $2;
+        if ($folder =~ /^\"(.+)\"$/) {
+            $folder = $1;
+        }
+        $self->{logger}->debug("run_cmd_status: $folder, $flags");
+
+        if ($flags =~ /MESSAGES/i) {
+            my $n = 0;
+            if ($folders{$folder}{"uids"}) {
+                my @ar = @{$folders{$folder}{"uids"}};
+                $n = $#ar + 1;
+            }
+            $answer .= "MESSAGES $n";
+            $need_space = 1;
+        }
+        if (1 or $flags =~ /RECENT/i) {
+            if ($need_space) {$answer .= " ";}
+            foreach my $uid (@{$folders{$folder}{"uids"}}) {
+                $self->{logger}->debug("uid is ".Dumper(%{$uid}));
+            }
+        }
+        if (1 or $flags =~ /UIDNEXT/i) {
+        }
+        if (1 or $flags =~ /UIDVALIDITY/i) {
+        }
+        if (1 or $flags =~ /RECENT/i) {
+        }
+
+        $self->tagged_send("OK STATUS completed", $cmd_num);
+        $self->{logger}->debug(">>>: OK STATUS completed");
+        return 1;
+    }
+    $self->{logger}->info("STATUS command is not well formed");
+    return -1;
 }
 
 sub tagged_send
@@ -311,6 +478,28 @@ sub notagged_send
     }
 }
 
+sub send_answer_from_config {
+    my $self = shift;
+    my @ar = shift;
+    @ar = @{$ar[0]};
+    my $cmd_num = shift;
+
+    my $n = $#ar + 1;
+    if ($n > 0) {
+        for (my $i = 0; $i < $n; $i++) {
+            $self->{logger}->debug(">>>: $ar[$i]");
+            if ($i == $n - 1) {
+                $self->tagged_send($ar[$i], $cmd_num);
+            }
+            else {
+                $self->notagged_send($ar[$i]);
+            }
+        }
+        return 1;
+    }
+    return 0;
+}
+
 sub get_test_file {
     my $self = shift;
     return $self->{init_params}->{test};
@@ -334,6 +523,12 @@ sub parse_test_file {
     my $key;
     my @test;
     my $k = 0;
+    my $folder_name;
+    my $folder_attribute;
+    my $uid;
+
+    my $is_hash = 0;
+    my $is_array = 0;
 
     my $is_imap = 0;
     my $is_test = 0;
@@ -344,14 +539,27 @@ sub parse_test_file {
         if (/^\{\}$/) {
             next;
         }
-
-        if (/\{/) {
+        if (/^\[\]$/) {
+            next;
+        }
+        if (/^\{$/) {
+            $is_hash = 1;
             $k++;
             next;
         }
-
-        if (/\}/) {
+        if (/^\[$/) {
+            $k++;
+            $is_array = 1;
+            next;
+        } 
+        if (/^[\}\]]/) {
             $k--;
+            if (/^\}$/) {
+                $is_hash = 0;
+            }
+            else {
+                $is_array = 0;
+            }
             if ($k == 0) {
                 $is_imap = 0;
                 $is_test = 0;
@@ -360,6 +568,9 @@ sub parse_test_file {
         }
 
         if (/^$/) {
+            next;
+        }
+        if (/^\#/) {
             next;
         }
 
@@ -374,22 +585,25 @@ sub parse_test_file {
         }
         elsif ($k == 1) {
             if($is_imap) {
-                $key = lc $_;
+                /^(\w+)/;
+                $key = lc $1;
                 unless ($key eq 'login' or $key eq 'capability' or $key eq 'noop' or $key eq 'select'
                     or $key eq 'status' or $key eq 'fetch' or $key eq 'id' or $key eq 'examine'
                     or $key eq 'create' or $key eq 'delete' or $key eq 'rename' or $key eq 'subscribe'
                     or $key eq 'unsubscribe' or $key eq 'list' or $key eq 'xlist' or $key eq 'lsub'
                     or $key eq 'append' or $key eq 'check' or $key eq 'unselect' or $key eq 'expunge'
                     or $key eq 'search' or $key eq 'store' or $key eq 'copy' or $key eq 'move'
-                    or $key eq 'close' or $key eq 'logout') {
+                    or $key eq 'close' or $key eq 'logout' or $key eq 'namespace') {
                     warn "invalid key in imap part in $test_file\n";
                 }
                 my @ar;
-                @{$imap{$_}} = @ar;
+                @{$imap{$key}} = @ar;
             }
             elsif ($is_test) {
-                my @ar = [];
-                push @test, @ar;
+                #my @ar = [];
+                #push @test, @ar;
+                my %hash = ();
+                push @test, \%hash;
             }
         }
         elsif ($k == 2) {
@@ -397,6 +611,17 @@ sub parse_test_file {
                 push @{$imap{$key}}, $_;
             }
             elsif($is_test) {
+                my %folder;
+                my %hash;
+
+                /^(\w+)/;
+                $folder_name = $1;
+                #%{$folder{$_}} = %hash;
+                $test[-1]->{$folder_name} = \%hash;
+                #$test[-1] = \%folder;
+
+                #push @{$test[-1]}, \%folder;
+=begin
                 if (/^(\w+):[ ]+\[([\s\,\w]+)\]$/) {
                     my $key1 = $1;
                     my $value = $2;
@@ -406,6 +631,48 @@ sub parse_test_file {
                     @{$hash{$key1}} = @ar;
                     push @{$test[-1]}, \%hash;
                 }
+=cut
+            }
+        }
+        elsif ($k == 3) {
+            if ($is_test) {
+                if (/^(\w+)[:]*[ ]*[\(\[]\s*([\s\,\w\(\)]+)[\]\)][\,]*$/) {
+                    my $key1 = $1;
+                    my $value = $2;
+                    my @ar = split (/, */, $value);
+
+                    @{$test[-1]->{$folder_name}->{$key1}} = @ar;
+                    $folder_attribute = $key1;
+                }
+                elsif (/^(\w+)[:\s]*$/) {
+                    my @ar;
+                    @{$test[-1]->{$folder_name}->{$1}} = @ar;
+                    $folder_attribute = $1;
+                }
+            }
+        }
+        elsif ($k == 4) {
+           if ($is_test) {
+                if (/^(\w+)[:]*[ ]*[\[\(]\s*([\s\,\w\(\)]+)[\]\)][\,]*$/) {
+                    my $key1 = $1;
+                    my $value = $2;
+                    my @ar = split (/, */, $value);
+                    my %hash = ($key1 => \@ar);
+                    push @{$test[-1]->{$folder_name}->{$folder_attribute}}, \%hash;
+                }
+                elsif (/^(\w+)[:\s]*$/) {
+                    my @ar;
+                    my %hash = ($1 => \@ar);
+                    push @{$test[-1]->{$folder_name}->{$folder_attribute}}, \%hash;
+                    $uid = $1;
+                }
+           }
+        }
+        elsif ($k == 5) {
+            if ($is_test) {
+                /^(\w+)\,*$/;
+                $self->{logger}->debug("123 ".Dumper(@{$test[-1]->{$folder_name}->{$folder_attribute}}[-1]->{$uid}));
+                push @{@{$test[-1]->{$folder_name}->{$folder_attribute}}[-1]->{$uid}}, $1;
             }
         }
     }
