@@ -1,17 +1,17 @@
 imap
 {
     login:
-    {
+    [
         * CAPABILITY IMAP ID XLIST UIDPLUS UNSELECT MOVE
         OK Authentication successful
-    }
+    ]
     capability
-    {
+    [
         * CAPABILITY IMAP
     
         * CAPABILITY ID XLIST UIDPLUS UNSELECT MOVE
         OK CAPABILITY completed
-    }
+    ]
 }
 
 test
@@ -21,23 +21,21 @@ test
         Inbox: 
         {
             uids 
-            [
+            {
                 001 [recent],
-                002,
                 003 [recent],
                 005 [recent]
-            ]
+            }
             flags [ hashnochildren, noselect]
-            uidvalidity (13123)
+            uidvalidity : 13123
         }
         test
         {
             uids
-            [
+            {
                 10 [recent],
                 11 [recent],
-                12
-            ]
+            }
         }
      }
     2
@@ -45,7 +43,7 @@ test
         inbox
         {
             uids 
-            [
+            {
                 002 [seen,answered],
                 005
                 [
@@ -53,8 +51,7 @@ test
                     answered,
 #09-Jul-2014 09:21:57 +0000
                 ],
-                003
-            ]
+            }
         }
         test
         {
@@ -67,11 +64,11 @@ result
 {
     1
      {
-        qqqq
+        qqqq [123]
      }
     2
      {
-        qqqq
+        qqqq [567]
      }
     total
      {
