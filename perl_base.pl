@@ -225,12 +225,17 @@ sub parse_test_file1 {
     my $is_new_bracket = 0;
     my $is_init_item = 1;
 
-    if (do_parse($fh, \%glhash, 0, \@brackets) <= 0) {
-        print "ERROR in parsing\n";
-        $fh->close();
-        return -1;
-    } else {
-        print "OK, parsing completed\n";
+    eval {
+        if (do_parse($fh, \%glhash, 0, \@brackets) <= 0) {
+            print "ERROR in parsing\n";
+            $fh->close();
+            return -1;
+        } else {
+            print "OK, parsing completed\n";
+        }
+    };
+    if ($@) {
+        print "TRY CATCH ERROR, check your config file, $@\n";
     }
 
     $fh->close();
