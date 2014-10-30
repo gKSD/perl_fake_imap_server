@@ -128,7 +128,7 @@ sub init
 
     if (defined $self->{init_params}->{test}) {
         @{$self->{test}} = [];
-        $self->parse_test_file($self->{init_params}->{test});
+        $self->parse_test_file1($self->{init_params}->{test});
     }
 
     if (defined $self->{init_params}->{pid_file} ) {
@@ -685,113 +685,172 @@ sub parse_test_file {
     $self->{imap} = \%imap;
 }
 
-sub parse_file_with_test {
+sub parse_test_file1 {
     my $self = shift;
     my $test_file = shift;
 
     my $fh = new IO::File;
-    unless ($fh->open("< $test_file")) {
+    unless ($fh->open("$test_file")) {
         die "file($test_file) with imap tests not found\n";
     }
 
-    my $k = 0;
-    my @test_array;
-    while(<$fh>) {
-        chomp $_;
+    my @brackets;
+    my %glhash;
 
-        s/\s*//;
-        if (/\{/) {
-            $k++;
-            next;
+    eval {
+        if ($self->do_parse($fh, \%glhash, 0, \@brackets) <= 0) {
+            print "ERROR in parsing\n";
+            $fh->close();
+            return -1;
+        } else {
+            print "OK, parsing completed\n";
+            
+            $self->{test} = \@{$glhash{test}}; #\@test;
+            $self->{imap} = \%{$glhash{imap}}; #\%imap;
         }
-        elsif (/\}/) {
-            $k--;
-            next;
-        }
-        elsif (/^$/) {
-            next;
-        }
-
-        if ($k == 0) {
-            #$key = lc $_;
-            my @ar = [];
-            push @test_array, @ar;
-        }
-        else {
-            if (/^(\w+):[ ]+\[([\s\,\w]+)\]$/) {
-                my $key = $1;
-                my $value = $2;
-                my %hash = ();
-                my @ar = split (/, */, $value);
-
-                @{$hash{$key}} = @ar;
-
-                push @{$test_array[-1]}, \%hash;
-                #if (my @ar = $value =~ /([\w]*[, ]*)*([\w]*)/) {
-                #    print "ar: ".Dumper(@ar)."\n";
-                #}
-
-            }
-        }
+    };
+    if ($@) {
+        $self->{logger}->debug("TRY CATCH ERROR, check your config file, $@\n");
+        warn "start server error, check your config file, $@\n";
     }
 
-    $self->{test} = \@test_array;
     $fh->close();
+    print Dumper(%glhash);
 }
 
-sub parse_scenario {
+sub do_parse {
     my $self = shift;
-    my $scenario = shift;
+    my $fh = shift; #указатель на файл
+    my $it = shift; # ссылка на предыдущую структуру
+    my $is_ar = shift; # тип предыдущей структуры - хэш или массив
+    my $brackets = shift; #ссылка на массив со скобками
 
-    my $fh = new IO::File;
-    unless ($fh->open("< $scenario")) {
-        die "imap scenario  not found\n";
-    }
+    $self->{logger}->debug("FUNCTION do_parse,".Dumper($it));
 
-### Creating hashmap from scenario
-### Keys: login, capability
+    my $prev_line;
+    my $is_first = 1;
 
-    my $key;
-    my %hash;
-    my $k = 0; # используется для подсчета скобочек
     while (<$fh>) {
         chomp $_;
+        s/\s*//;
 
-        if (/\{/) {
-            $k++;
+        if (/^\{\}$/) {
             next;
         }
-        elsif (/\}/) {
-            $k--;
+        if (/^\[\]$/) {
             next;
         }
-        elsif (/^$/)
-        {
-            next;
-        }
-        if ($k == 0) {
-            $key = lc $_;
-            unless ($key eq 'login' or $key eq 'capability' or $key eq 'noop' or $key eq 'select'
-                    or $key eq 'status' or $key eq 'fetch' or $key eq 'id' or $key eq 'examine'
-                    or $key eq 'create' or $key eq 'delete' or $key eq 'rename' or $key eq 'subscribe'
-                    or $key eq 'unsubscribe' or $key eq 'list' or $key eq 'xlist' or $key eq 'lsub'
-                    or $key eq 'append' or $key eq 'check' or $key eq 'unselect' or $key eq 'expunge'
-                    or $key eq 'search' or $key eq 'store' or $key eq 'copy' or $key eq 'move'
-                    or $key eq 'close') {
-                die "invalid key in imap scenario ($scenario)\n";
+        if (/^\{$/) {
+            push @{$brackets}, '}'; #type of expected closing bracket
+            $self->{logger}->debug( "brackets: ".Dumper(@{$brackets}));
+            if ($is_ar) {
+                my %hash;
+                push @{$it}, \%hash;
+                if ($self->do_parse($fh, \%{$it->[-1]}, 0, $brackets) <= 0) {return -1;}
             }
-            my @ar = [];
-            @{$hash{$_}} = @ar;
+            else {
+                %{$it->{$prev_line}} = ();
+                $self->{logger}->debug("it {} before: ".Dumper($it));
+                if ($self->do_parse($fh, \%{$it->{$prev_line}}, 0, $brackets) <= 0) {return -1;}
+            }
+            $self->{logger}->debug("it {} after: ".Dumper($it));
+            $is_first = 1;
+            next;
         }
-        else {
-            #push @hash{$key}, "qe";
-            s/\s*//; #убирает пробелы в начале строки
-            push @{$hash{$key}}, $_;
+        if (/^\[$/) {
+            push @{$brackets}, ']';
+            $self->{logger}->debug("brackets: ".Dumper(@{$brackets}));
+            if (!$is_ar and $is_first) {return -1;}
+            if ($is_ar) {
+                my @ar;
+                push @{$it}, \@ar;
+                if ($self->do_parse($fh, \@{$it->[-1]}, 1, $brackets) <= 0) {return -1;}
+            }
+            else {
+                @{$it->{$prev_line}} = ();
+                $self->{logger}->debug("it [] before: ".Dumper($it));
+                if ($self->do_parse($fh, \@{$it->{$prev_line}}, 1, $brackets) <= 0) {return -1;}
+            }
+            $self->{logger}->debug("it {} after: ".Dumper($it));
+            $is_first = 1;
+            next;
+        }
+        if (/^\]/) {
+            my $last = pop @{$brackets};
+            unless ($last eq ']') {
+                $self->{logger}->debug("123 Syntax error in config, check ] brackets, ".Dumper(@{$brackets}));
+                return -1;
+            }
+            if (!$is_first) {
+                push @{$it}, $prev_line;
+            }
+            return 1;
+        }
+        if (/^\}/) {
+            my $last = pop @{$brackets};
+            unless ($last eq '}') {
+                $self->{logger}->debug("456 Syntax error in config, check } brackets, ".Dumper(@{$brackets}));
+                return -1;
+            }
+            if ($is_first) {
+                return 1;
+            } else {
+                $self->{logger}->debug("789 Syntax error in config, check {} or [] brackets, ".Dumper(@{$brackets}));
+                return -1;
+            }
+            next;
+        }
+
+        if (/^$/) {next;}
+        if (/^\#/) {next;}
+        if ($is_first) {
+            $self->{logger}->debug("LINE is $_");
+            if (/^(\w+)[:]?\s*[\(\[]\s*([\s\,\w\(\)]+)[\]\)]\,*\s*$/) {
+                my $key = $1;
+                my $value = $2;
+                my @ar = split (/, */, $value);
+                @{$it->{$key}} = @ar;
+                $self->{logger}->debug("it {} after little push 1: ".Dumper($it));
+                $is_first = 1;
+            }
+            elsif (/^(\w+)[:]?\s*\{\s*([\s\,\w\(\),\:,\=,\>]*)\}\,?\s*$/) {
+                print "unsupported type of hash, check your config\n";
+                return -1;
+            }
+            elsif (/^(\w+)\s*\:\"?\s*(\w+)\s*\"?\s*\,?$/) {
+                $it->{$1} = $2;
+                $self->{logger}->debug("it {} after little push 2: ".Dumper($it));
+                $is_first = 1;
+            }
+            elsif (/^\s*\[\s*([\s\,\w\(\)]*)\s*\]\,?\s*$/) {
+                my $value = $1;
+                my @ar = split (/, */, $value);
+                push @{$it}, \@ar;
+                $is_first = 1;
+            }
+            elsif  (!$is_ar and /^\s*\[/) {
+                return -1;
+            }
+            else {
+                $prev_line = $_;
+                /(.+)[:]\s*$/;
+                print $1."\n";
+                $is_first = 0;
+            }
+        } else {
+            if ($is_ar) {
+                push @{$it}, $prev_line;
+                $prev_line = $_;
+            } else {
+                $self->{logger}->debug("000 Syntax error in config, check {} or [] brackets, ".Dumper(@{$brackets})); 
+                return -1;
+            }
         }
     }
-    $fh->close();
-    $self->{scenario} = \%hash;
+    return 1;
 }
+
+
 
 sub parse_config
 {

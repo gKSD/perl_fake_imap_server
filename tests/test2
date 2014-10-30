@@ -15,8 +15,7 @@ imap
 }
 
 test
-{
-    1
+[
      {
         Inbox: 
         {
@@ -38,7 +37,6 @@ test
             }
         }
      }
-    2
      {
         inbox
         {
@@ -58,7 +56,7 @@ test
             uids: [10]
         }
      }
-}
+]
 
 result
 {
