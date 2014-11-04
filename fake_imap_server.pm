@@ -575,54 +575,99 @@ sub run_cmd_fetch {
         $self->{logger}->info("Folder hasn't not been selected yet or error's appeared during selecting");
         return -1;
     }
-    unless (defined $self->{fetch_num}->{$self->{selected_folder}}) {
-        $self->{fetch_num}->{$folder} = 1;
+    unless (defined $self->{fetch_num}->{$folder}) {
+        $self->{fetch_num}->{$folder} = {counter => 1};
     }
 
     if ($fetch =~ /body/i) {
+        if ($self->{init_params}->{message}) {
+            my $file = $self->{init_params}->{message};
+            my $fh = new IO::File;
+            my $fake_message = "";
+            if ($fh->open("< $file")) {
+                while (<$fh>) {
+                    $fake_message .= $_;
+                }
+                $fh->close();
+
+                my $length = length($fake_message);
+
+                $fetch =~ /^\s*\w+\s+UID\s+FETCH\s+(\d+)/;
+                my $uid = $1;
+                my $client = $self->{client};
+                my $fetch_id = $self->{fetch_num}->{$folder}->{$uid};
+
+                unless ($fetch_id or $uid or $length ) {
+                    return -1;
+                }
+
+                eval {
+                    print $client "* $fetch_id FETCH (UID $uid BODY[] {$length}\r\n";
+                    print $client $fake_message;
+                    print $client ")\r\n";
+                    print $client "$cmd_num OK FETCH BODY done\r\n";
+                };
+                if ($@) {
+                    $self->{logger}->error("fake message send error");
+                    return -1;
+                }
+                return 1;
+            }
+            else {
+                $self->{logger}->info("file with fake message ($file)not found\n");
+            }
+        }
+        unless ($self->send_fake_msg($cmd_num)) {return -1;}
         return 1;
     }
-    $fetch = "173 UID FETCH 005 (INTERNALDATE FLAGS)";
     if ($fetch =~ /^\s*\w+\s+UID\s+FETCH\s+(\d+)\:?([\d,\*]+)?\s+\(([\w\s]*)\)\s*$/) {
-        $self->{logger}->debug("OMNO    \$1 = $1, \$2 = $2, \$3 = $3, \$folder = $folder");
         my $fuid = $1;
         my $fflags = $3;
+        my $answer;
         if ($2) {
-             
+             my $right = $2; 
+             my $uids = $folders{$folder}{"uids"};
+             if ($right eq "*") {
+                foreach my $uid (sort keys %{$uids}) {
+                    unless ($self->{fetch_num}->{$folder}->{$uid}) {
+                        $self->{logger}->debug("new item, $uid");
+                        $self->{fetch_num}->{$folder}->{$uid} = $self->{fetch_num}->{$folder}->{"counter"};
+                        $self->{fetch_num}->{$folder}->{"counter"}++;
+                    }
+                    $answer = $self->run_fetch_uid($uid, $fflags, $uids->{$uid});
+                    if ($uid >= $fuid) {
+                        $self->{logger}->debug(">>>: $answer");
+                        $self->notagged_send($answer);
+                    }
+                }
+             }
         }
         else {
-            $self->{logger}->debug("\$2 is not defined");
-            my $uids = $folders{$folder}{"uids"};
-            my $uid = $folders{$folder}{"uids"}->{$fuid};#$uids->{$fuid};
+            my $uid = $folders{$folder}{"uids"}->{$fuid};
+            unless ($self->{fetch_num}->{$folder}->{$fuid}) {
+                $self->{logger}->debug("new item, $uid");
+                $self->{fetch_num}->{$folder}->{$fuid} = $self->{fetch_num}->{$folder}->{"counter"};
+                $self->{fetch_num}->{$folder}->{"counter"}++;
+            }
+            $answer = $self->run_fetch_uid($fuid, $fflags, $uid);
 
-            $self->{logger}->debug(">>>: ".$self->run_fetch_uid($fuid, $fflags, $uid));
-            $self->notagged_send($self->run_fetch_uid($fuid, $fflags, $uid));
-            $self->{logger}->debug(">>>: OK FETCH done");
-            $self->tagged_send("OK FETCH done", $cmd_num);
+            $self->{logger}->debug(">>>: $answer");
+            $self->notagged_send($answer);
         }
+        $self->{logger}->debug(">>>: OK FETCH done");
+        $self->tagged_send("OK FETCH done", $cmd_num);
         return 1;
     }
-    $self->{logger}->debug("QQQQQQQQQQQQQQQQQQ");
     return -1;
 }
 
 sub run_fetch_uid {
     my $self = shift;
-
     my ($fuid, $fflags, $uid) = @_;
-    #my ($fuid, $fflags) = @_;
-    
-    #my %folders = %{$self->{test}[$self->{connection_number}]};
-    #my $folder  = $self->{selected_folder};
-    #my $uids = $folders{$folder}{"uids"};
-    
-    #my $uid = $uids->{$fuid};
     my $folder  = $self->{selected_folder};
-    my $answer = $self->{fetch_num}->{$folder}." FETCH (UID $fuid ";
+    my $answer = $self->{fetch_num}->{$folder}->{$fuid}." FETCH (UID $fuid ";
     my $date = "";
     my $uid_flags = "";
-    $self->{fetch_num}->{$folder}++;
-    $self->{logger}->debug("1) **$fuid** 2)$fflags ******************************************* ".Dumper(@{$uid}));
     
     foreach my $flag (@{$uid}) {
         $self->{logger}->debug("flag = $flag");
@@ -644,6 +689,30 @@ sub run_fetch_uid {
     }
     $answer .= ")";
     return $answer;
+}
+
+sub send_fake_msg {
+    my $self = shift;
+    my $cmd_num = shift;
+    my $fake_message = "From: aaaaa <aaaaa\@mail.ru>\r\nTo: bbbbb <bbbbb\@mail.ru>\r\nSubject: this is just subject\r\n";
+    $fake_message .= "Date: Wed, 23 Jul 2014 17:53:07 +0400\r\n";
+    $fake_message .= "\r\n";
+    $fake_message .= "This is just fake message\r\nTo testing our imap-collector\r\n";
+    $fake_message .= "On memory leaks\r\n";
+
+    my $length = length($fake_message);
+    my $client = $self->{client};
+    eval {
+        print $client "* 1 FETCH (UID 587 BODY[] {$length}\r\n";
+        print $client $fake_message;
+        print $client ")\r\n";
+        print $client "$cmd_num OK FETCH BODY done\r\n";
+    };
+    if ($@) {
+        $self->{logger}->error("fake message send error");
+        return -1;
+    }
+    return 1;
 }
 
 sub tagged_send
