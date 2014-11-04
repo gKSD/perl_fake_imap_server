@@ -101,6 +101,8 @@ sub new {
     $self->{test} = undef;                              # хранение тестов
     $self->{logger} = undef;
     $self->{connection_number} = 0;
+    $self->{selected_folder} = "";
+    $self->{fetch_num} = {};
 
     bless $self, $class;
 
@@ -209,6 +211,7 @@ sub process_request {
         $self->{logger}->debug("<<<: $line");
 
         if ($line =~ /login/i) {
+            $self->{logger}->debug("123 ".Dumper($self->{imap}));
             if ($mode) {
                 if ($self->{imap}->{login}) {
                     if ($self->send_answer_from_config($self->{imap}->{login}, $cmd_num)) {
@@ -320,24 +323,81 @@ sub process_request {
                     next;
                 }
             }
+            $line =~ /^\w+\s+STATUS\s+(.+)\s+\((.*)\)\s*$/i;
+            my $folder = $1;
             if ($line =~ /inbox/i) {
-                $self->notagged_send("LIST (\\trash) \"/\" Trash");
+                $self->notagged_send("STATUS $folder (UIDNEXT 2 MESSAGES 1 UIDVALIDITY 1)");
             }
             else {
-                $self->notagged_send("LIST (\\sent) \"/\" Sent");
+                $self->notagged_send("STATUS $folder (UIDNEXT 1 MESSAGES 0 UIDVALIDITY 1)");
             }
-            $self->tagged_send("OK LIST Completed", $cmd_num);
+            $self->tagged_send("OK STATUS Completed", $cmd_num);
 
         }
         elsif ($line =~ /select/i) {
-            
+            if ($mode) {
+                if ($self->{imap}->{"select"}) {
+                    if ($self->send_answer_from_config($self->{imap}->{"select"}, $cmd_num)) {
+                        next;
+                    }
+                }
+                if ($self->run_cmd_select($cmd_num, $line, 0)) {
+                    next;
+                }
+            }
+            unless ($line =~ /^\w+\s+SELECT\s+(\S+)\s*$/i) {
+                ###?????
+            }
+            my $folder_with_quotes = $1;
+            my $folder = (($folder_with_quotes =~ /^\"(.+)\"$/)? $1: $folder_with_quotes); 
+            $self->{selected_folder} = $folder;
+
+            $self->notagged_send("0 exists");
+            $self->tagged_send("OK [READ-WRITE] SELECT Completed", $cmd_num);
         }
-        elsif ($line =~ /fetch/i)
-        {}
+        elsif ($line =~ /examine/i) {
+            if ($mode) {
+                if ($self->{imap}->{"examine"}) {
+                    if ($self->send_answer_from_config($self->{imap}->{"examine"}, $cmd_num)) {
+                        next;
+                    }
+                }
+                if ($self->run_cmd_select($cmd_num, $line, 1)) {
+                    next;
+                }
+            }
+            unless ($line =~ /^\w+\s+EXAMINE\s+(\S+)\s*$/i) {
+                ###?????
+            }
+            my $folder_with_quotes = $1;
+            my $folder = (($folder_with_quotes =~ /^\"(.+)\"$/)? $1: $folder_with_quotes); 
+            $self->{selected_folder} = $folder;
+
+            $self->notagged_send("0 exists");
+            $self->tagged_send("OK [READ-ONLY] EXAMINE Completed", $cmd_num);
+
+        }
+        elsif ($line =~ /fetch/i) {
+            if ($mode) {
+                if ($self->{imap}->{"fetch-body"}) {
+                    if ($self->send_answer_from_config($self->{imap}->{"fetch-body"}, $cmd_num)) {
+                        next;
+                    }
+                }
+                elsif ($self->{imap}->{"fetch"}) {
+                    if ($self->send_answer_from_config($self->{imap}->{"fetch-body"}, $cmd_num)) {
+                        next;
+                    }
+                }
+                if ($self->run_cmd_fetch($cmd_num, $line, 1)) {
+                    next;
+                }
+
+            }
+        }
         elsif ($line =~ /id/i)
         {}
-        elsif ($line =~ /examine/i)
-        {}
+ 
         elsif ($line =~ /create/i)
         {}
         elsif ($line =~ /delete/i)
@@ -407,43 +467,183 @@ sub run_cmd_status {
     unless (%folders) {return -1;}
 
     if ($status =~ /^\w+\s+STATUS\s+(.+)\s+\((.*)\)\s*$/i) {
-        my $answer = "STATUS ";
         my $need_space = 0;
-        my $folder = $1;
-        my $flags = $2;
-        if ($folder =~ /^\"(.+)\"$/) {
-            $folder = $1;
-        }
-        $self->{logger}->debug("run_cmd_status: $folder, $flags");
+        my $folder_with_quotes = $1;
+        my $flags = $2." RECENT ";
+        my $folder = (($folder_with_quotes =~ /^\"(.+)\"$/)? $1: $folder_with_quotes);
+        my $answer = "STATUS ".$folder_with_quotes." (";
 
         if ($flags =~ /MESSAGES/i) {
-            my $n = 0;
-            if ($folders{$folder}{"uids"}) {
-                my @ar = @{$folders{$folder}{"uids"}};
-                $n = $#ar + 1;
-            }
-            $answer .= "MESSAGES $n";
+            $answer .= "MESSAGES ".$self->get_msg_amount(\%{$folders{$folder}{"uids"}});
             $need_space = 1;
         }
-        if (1 or $flags =~ /RECENT/i) {
+        if ($flags =~ /RECENT/i) {
             if ($need_space) {$answer .= " ";}
-            foreach my $uid (@{$folders{$folder}{"uids"}}) {
-                $self->{logger}->debug("uid is ".Dumper(%{$uid}));
-            }
+            $answer .= "RECENT ".$self->get_recent_uids(\%{$folders{$folder}{"uids"}});
+            $need_space = 1;
         }
-        if (1 or $flags =~ /UIDNEXT/i) {
+        if ($flags =~ /UIDNEXT/i) {
+            if ($need_space) {$answer .= " ";}
+            $answer .= "UIDNEXT ".$self->get_uidnext(\%{$folders{$folder}{"uids"}});
+            $need_space = 1;
         }
-        if (1 or $flags =~ /UIDVALIDITY/i) {
+        if ($flags =~ /UIDVALIDITY/i) {
+            if ($need_space) {$answer .= " ";}
+            $answer .= "UIDVALIDITY ".$self->get_uidvalidity(\%{$folders{$folder}});
+            $need_space = 1;
         }
-        if (1 or $flags =~ /RECENT/i) {
+        if ($flags =~ /UNSEEN/i) {
+            if ($need_space) {$answer .= " ";}
+            $answer .= "UNSEEN ".$self->get_unseen_uids(\%{$folders{$folder}{"uids"}});
+            $need_space = 1;
         }
-
+        $answer .= ")";
+        $self->notagged_send($answer);
+        $self->{logger}->debug(">>>: $answer");
         $self->tagged_send("OK STATUS completed", $cmd_num);
         $self->{logger}->debug(">>>: OK STATUS completed");
         return 1;
     }
     $self->{logger}->info("STATUS command is not well formed");
     return -1;
+}
+
+sub run_cmd_select {
+    my $self = shift;
+    my ($cmd_num, $select, $is_examine) = @_;
+
+    my %folders = %{$self->{test}[$self->{connection_number}]};
+    unless (%folders) {
+        $self->{selected_folder} = "";
+        return -1;
+    }
+
+    $self->notagged_send("FLAGS ()");
+    $self->notagged_send("OK [PERMANENTFLAGS] ()");
+
+    $self->{logger}->debug(">>>: FLAGS ()");
+    $self->{logger}->debug(">>>: OK [PERMANENTFLAGS] ()");
+
+
+    unless ($select =~ /^\w+\s+(SELECT|EXAMINE)\s+(\S+)\s*$/i) {
+        $self->{selected_folder} = "";
+        return -1;
+    }
+    my $folder_with_quotes = $2;
+    my $folder = (($folder_with_quotes =~ /^\"(.+)\"$/)? $1: $folder_with_quotes); 
+   
+    $self->{selected_folder} = $folder;
+    
+    my $n = $self->get_msg_amount(\%{$folders{$folder}{"uids"}});
+    $self->notagged_send("$n EXISTS");
+    $self->{logger}->debug(">>>: $n EXISTS");
+
+    $n = $self->get_recent_uids(\%{$folders{$folder}{"uids"}});
+    $self->notagged_send("$n RECENT");
+    $self->{logger}->debug(">>>: $n RECENT");
+
+    $n = $self->get_unseen_uids(\%{$folders{$folder}{"uids"}});
+    $self->notagged_send("OK [UNSEEN $n]");
+    $self->{logger}->debug(">>>: OK [UNSEEN $n]");
+
+    $n = $self->get_uidvalidity(\%{$folders{$folder}});
+    $self->notagged_send("OK [UIDVALIDITY $n] UIDs valid");
+    $self->{logger}->debug(">>>: OK [UIDVALIDITY $n] UIDs valid");
+
+    $n = $self->get_uidnext(\%{$folders{$folder}{"uids"}});
+    $self->notagged_send("OK [UIDNEXT $n] Predicted next UID");
+    $self->{logger}->debug(">>>: OK [UIDNEXT $n] Predicted next UID");
+
+    if ($is_examine) {
+        $self->tagged_send("OK [READ-ONLY] EXAMINE completed", $cmd_num);
+        $self->{logger}->debug(">>>: OK [READ-ONLY] EXAMINE completed");
+    }
+    else {
+        $self->tagged_send("OK [READ-WRITE] SELECT completed", $cmd_num);
+        $self->{logger}->debug(">>>: OK [READ-WRITE] SELECT completed");
+    }
+    return 1;
+}
+
+sub run_cmd_fetch {
+    my $self = shift;
+    my ($cmd_num, $fetch) = @_;
+
+    my %folders = %{$self->{test}[$self->{connection_number}]};
+    my $folder  = $self->{selected_folder};
+    unless (defined $folder) {
+        $self->{logger}->info("Folder hasn't not been selected yet or error's appeared during selecting");
+        return -1;
+    }
+    unless (defined $self->{fetch_num}->{$self->{selected_folder}}) {
+        $self->{fetch_num}->{$folder} = 1;
+    }
+
+    if ($fetch =~ /body/i) {
+        return 1;
+    }
+    $fetch = "173 UID FETCH 005 (INTERNALDATE FLAGS)";
+    if ($fetch =~ /^\s*\w+\s+UID\s+FETCH\s+(\d+)\:?([\d,\*]+)?\s+\(([\w\s]*)\)\s*$/) {
+        $self->{logger}->debug("OMNO    \$1 = $1, \$2 = $2, \$3 = $3, \$folder = $folder");
+        my $fuid = $1;
+        my $fflags = $3;
+        if ($2) {
+             
+        }
+        else {
+            $self->{logger}->debug("\$2 is not defined");
+            my $uids = $folders{$folder}{"uids"};
+            my $uid = $folders{$folder}{"uids"}->{$fuid};#$uids->{$fuid};
+
+            $self->{logger}->debug(">>>: ".$self->run_fetch_uid($fuid, $fflags, $uid));
+            $self->notagged_send($self->run_fetch_uid($fuid, $fflags, $uid));
+            $self->{logger}->debug(">>>: OK FETCH done");
+            $self->tagged_send("OK FETCH done", $cmd_num);
+        }
+        return 1;
+    }
+    $self->{logger}->debug("QQQQQQQQQQQQQQQQQQ");
+    return -1;
+}
+
+sub run_fetch_uid {
+    my $self = shift;
+
+    my ($fuid, $fflags, $uid) = @_;
+    #my ($fuid, $fflags) = @_;
+    
+    #my %folders = %{$self->{test}[$self->{connection_number}]};
+    #my $folder  = $self->{selected_folder};
+    #my $uids = $folders{$folder}{"uids"};
+    
+    #my $uid = $uids->{$fuid};
+    my $folder  = $self->{selected_folder};
+    my $answer = $self->{fetch_num}->{$folder}." FETCH (UID $fuid ";
+    my $date = "";
+    my $uid_flags = "";
+    $self->{fetch_num}->{$folder}++;
+    $self->{logger}->debug("1) **$fuid** 2)$fflags ******************************************* ".Dumper(@{$uid}));
+    
+    foreach my $flag (@{$uid}) {
+        $self->{logger}->debug("flag = $flag");
+        if ($flag =~ /\d+\-\w+\-\d+\s*+\d+\:\d+:\d+\s+\+?\d*\s*/) {
+            $date = $flag;
+        }
+        else {
+            $uid_flags .= "\\$flag ";
+        }
+                    
+    }
+    if ($fflags =~ /internaldate/i) {
+        if ($date) {
+            $answer .= "INTERNALDATE \"$date\" ";
+        }
+    }
+    if ($fflags =~ /flags/i) {
+        $answer .= "FLAGS ($uid_flags)";
+    }
+    $answer .= ")";
+    return $answer;
 }
 
 sub tagged_send
@@ -476,6 +676,69 @@ sub notagged_send
     if ($@) {
         $self->{logger}->error("Untagged command send error");
     }
+}
+
+sub get_msg_amount {
+    my ($self, $folder) = @_;
+    return (%{$folder} ? scalar(keys %{$folder}): 0);
+}
+
+sub get_recent_uids {
+    my ($self, $folder) = @_;
+    my $n = 0;
+    if (%{$folder}) { 
+        foreach my $uid (keys %{$folder}) {
+            if (/recent/i ~~ \@{$folder->{$uid}}) {
+                $n++;
+            }
+        }
+    }
+    return $n;
+}
+
+sub get_unseen_uids {
+    my ($self, $folder) = @_;
+    my $n = 0;
+    if (%{$folder}) {
+        foreach my $uid (keys %{$folder}) {
+            unless (/seen/i ~~ \@{$folder->{$uid}}) {
+                $n++;
+            }
+        }
+    }
+    return $n;
+}
+
+sub get_seen_uids {
+    my ($self, $folder) = @_;
+    my $n = 0;
+    if (%{$folder}) {
+        foreach my $uid (keys %{$folder}) {
+            if (/seen/i ~~ \@{$folder->{$uid}}) {
+                $n++;
+            }
+        }
+    }
+    return $n;
+}
+
+sub get_uidnext {
+    my ($self, $folder) = @_;
+    my $uid_next = 0;
+    if (%{$folder}) {
+        foreach my $key (keys %{$folder}) {
+            if ($key > $uid_next) {
+                $uid_next = $key;
+            }
+        }
+    }
+    $uid_next += 1;
+    return $uid_next;
+}
+
+sub get_uidvalidity {
+    my ($self, $folder) = @_;
+    return ($folder->{"uidvalidity"}) ? $folder->{"uidvalidity"}:"123456";
 }
 
 sub send_answer_from_config {
@@ -699,11 +962,11 @@ sub parse_test_file1 {
 
     eval {
         if ($self->do_parse($fh, \%glhash, 0, \@brackets) <= 0) {
-            print "ERROR in parsing\n";
+            warn "ERROR in parsing\n";
             $fh->close();
             return -1;
         } else {
-            print "OK, parsing completed\n";
+            $self->{logger}->debug("OK, parsing completed");
             
             $self->{test} = \@{$glhash{test}}; #\@test;
             $self->{imap} = \%{$glhash{imap}}; #\%imap;
@@ -715,7 +978,7 @@ sub parse_test_file1 {
     }
 
     $fh->close();
-    print Dumper(%glhash);
+    #print Dumper(%glhash);
 }
 
 sub do_parse {
@@ -804,8 +1067,10 @@ sub do_parse {
         if (/^$/) {next;}
         if (/^\#/) {next;}
         if ($is_first) {
+            $prev_line = $_;
+            $is_first = 0;
             $self->{logger}->debug("LINE is $_");
-            if (/^(\w+)[:]?\s*[\(\[]\s*([\s\,\w\(\)]+)[\]\)]\,*\s*$/) {
+            if (/^(\w+)[:]?\s*[\(\[]\s*([\s\,\w\(\)]*)[\]\)]\,*\s*$/) {
                 my $key = $1;
                 my $value = $2;
                 my @ar = split (/, */, $value);
@@ -831,11 +1096,8 @@ sub do_parse {
             elsif  (!$is_ar and /^\s*\[/) {
                 return -1;
             }
-            else {
-                $prev_line = $_;
-                /(.+)[:]\s*$/;
-                print $1."\n";
-                $is_first = 0;
+            elsif (/(.+):\s*$/) {
+                $prev_line = $1;
             }
         } else {
             if ($is_ar) {
@@ -849,7 +1111,6 @@ sub do_parse {
     }
     return 1;
 }
-
 
 
 sub parse_config
