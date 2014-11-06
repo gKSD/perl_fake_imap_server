@@ -223,7 +223,7 @@ sub process_request {
                     }
                 }
             }
-            $self->{logger}->debug(">>>: OK LOGIN completed");
+            $self->{logger}->debug(">>>: $cmd_num OK LOGIN completed");
             $self->tagged_send("OK LOGIN completed", $cmd_num);
             $self->{state} = 1;
         }
@@ -236,7 +236,7 @@ sub process_request {
                 }
             }
             $self->{logger}->debug(">>>: CAPABILITY IDLE NAMESPACE");
-            $self->{logger}->debug(">>>: OK capability complited");
+            $self->{logger}->debug(">>>: $cmd_num OK capability complited");
 
             $self->notagged_send("CAPABILITY IDLE NAMESPACE");
             $self->tagged_send("OK capability complited", $cmd_num);
@@ -256,7 +256,7 @@ sub process_request {
 
             }
             $self->{logger}->debug(">>>: NAMESPACE ((\"INBOX.\" \".\")) NIL NIL");
-            $self->{logger}->debug(">>>: OK Namespace complited");
+            $self->{logger}->debug(">>>: $cmd_num OK Namespace complited");
 
             $self->notagged_send("NAMESPACE ((\"INBOX.\" \".\")) NIL NIL");
             $self->tagged_send("OK Namespace complited", $cmd_num);
@@ -269,7 +269,7 @@ sub process_request {
                     }
                 }
             }
-            $self->{logger}->debug(">>>: OK NOOP completed");
+            $self->{logger}->debug(">>>: $cmd_num OK NOOP completed");
             $self->tagged_send("OK NOOP completed", $cmd_num);
         }
         elsif ($line =~ /list/i) { #same with xlist
@@ -438,7 +438,7 @@ sub process_request {
             else {
                 $self->{logger}->debug(">>>: FETCH (UID 2147483647 FLAGS (\\Seen) INTERNALDATE \" 2-May-2014 17:12:07 +0000\")");
                 $self->notagged_send("FETCH (UID 2147483647 FLAGS (\\Seen) INTERNALDATE \" 2-May-2014 17:12:07 +0000\")");
-                $self->{logger}->debug(">>>: OK FETCH completed");
+                $self->{logger}->debug(">>>: $cmd_num OK FETCH completed");
                 $self->tagged_send("OK FETCH completed", $cmd_num);
             }
         }
@@ -475,7 +475,7 @@ sub process_request {
                 }
             }
             $self->tagged_send("NO RENAME error", $cmd_num); 
-            $self->{logger}->debug(">>>: NO RENAME error");
+            $self->{logger}->debug(">>>: $cmd_num NO RENAME error");
         }
         elsif ($line =~ /subscribe/i) {
             if ($self->{state} == 1) {
@@ -507,7 +507,7 @@ sub process_request {
                 }
             }
             $self->tagged_send("BAD UNSUBSCRIBE error: unsupported command", $cmd_num);
-            $self->{logger}->debug(">>>: BAD UNSUBSCRIBE error: unsupported command", $cmd_num);
+            $self->{logger}->debug(">>>: $cmd_num BAD UNSUBSCRIBE error: unsupported command", $cmd_num);
         }
         elsif ($line =~ /lsub/i) {
             if ($self->{state} == 1) {
@@ -523,7 +523,7 @@ sub process_request {
                 }
             }
             $self->tagged_send("BAD LSUB error: unsupported command", $cmd_num);
-            $self->{logger}->debug(">>>: BAD LSUB error: unsupported command", $cmd_num);
+            $self->{logger}->debug(">>>: $cmd_num BAD LSUB error: unsupported command", $cmd_num);
         }
         elsif ($line =~ /append/i) {
             if ($self->{state} == 1) {
@@ -539,7 +539,7 @@ sub process_request {
                 }
             }
             $self->tagged_send("BAD APPEND error: unsupported command", $cmd_num);
-            $self->{logger}->debug(">>>: BAD APPEND error: unsupported command", $cmd_num);
+            $self->{logger}->debug(">>>: $cmd_num BAD APPEND error: unsupported command", $cmd_num);
         }
         elsif ($line =~ /check/i) {
             unless ($self->{state} == 2) {
@@ -555,7 +555,7 @@ sub process_request {
                 }
             }
             $self->tagged_send("OK CHECK completed", $cmd_num); 
-            $self->{logger}->debug(">>>: OK CHECK completed");
+            $self->{logger}->debug(">>>: $cmd_num OK CHECK completed");
         }
         elsif ($line =~ /unselect/i) {
             if ($self->{state} == 0) {
@@ -576,7 +576,7 @@ sub process_request {
                 }
             }
             $self->tagged_send("OK UNSELECT completed", $cmd_num); 
-            $self->{logger}->debug(">>>: OK UNSELECT completed");
+            $self->{logger}->debug(">>>: $cmd_num OK UNSELECT completed");
         }
         elsif ($line =~ /expunge/i) {
             unless ($self->{state} == 2) {
@@ -595,7 +595,7 @@ sub process_request {
                 }
             }
             $self->tagged_send("OK EXPUNGE completed", $cmd_num); 
-            $self->{logger}->debug(">>>: OK EXPUNGE completed");
+            $self->{logger}->debug(">>>: $cmd_num OK EXPUNGE completed");
         }
         elsif ($line =~ /search/i) {
            unless ($self->{state} == 2) {
@@ -611,7 +611,7 @@ sub process_request {
                 }
             }
             $self->tagged_send("BAD SEARCH error: unsupported command", $cmd_num);
-            $self->{logger}->debug(">>>: BAD SEARCH error: unsupported command", $cmd_num);
+            $self->{logger}->debug(">>>: $cmd_num BAD SEARCH error: unsupported command", $cmd_num);
         }
         elsif ($line =~ /store/i) {
             unless ($self->{state} == 2) {
@@ -630,7 +630,7 @@ sub process_request {
                 }
             }
             $self->tagged_send("OK STORE completed", $cmd_num); 
-            $self->{logger}->debug(">>>: OK STORE completed");
+            $self->{logger}->debug(">>>: $cmd_num OK STORE completed");
         }
         elsif ($line =~ /uid copy/i) {
             unless ($self->{state} == 2) {
@@ -646,7 +646,7 @@ sub process_request {
                 }
             }
             $self->tagged_send("NO COPY error", $cmd_num);
-            $self->{logger}->debug(">>>: NO COPY error");
+            $self->{logger}->debug(">>>: $cmd_num NO COPY error");
         }
         elsif ($line =~ /close/i) {
             unless ($self->{state} == 2) {
@@ -667,7 +667,7 @@ sub process_request {
                 }
             }
             $self->tagged_send("OK CLOSE completed", $cmd_num); 
-            $self->{logger}->debug(">>>: OK CLOSE completed");
+            $self->{logger}->debug(">>>: $cmd_num OK CLOSE completed");
         }
         elsif ($line =~ /delete/i) {
             if ($self->{state} == 0) {
@@ -686,7 +686,7 @@ sub process_request {
                 }
             }
             $self->tagged_send("OK DELETE completed", $cmd_num);
-            $self->{logger}->debug(">>>: OK DELETE completed");
+            $self->{logger}->debug(">>>: $cmd_num OK DELETE completed");
         }
         else {
             if ($mode) {
@@ -725,7 +725,7 @@ sub run_cmd_list() {
         $self->{logger}->debug(">>>: $answer");
     }
     $self->tagged_send("OK LIST completed", $cmd_num);
-    $self->{logger}->debug(">>>: OK LIST completed");
+    $self->{logger}->debug(">>>: $cmd_num OK LIST completed");
     return 1;
 }
 
@@ -784,11 +784,11 @@ sub run_cmd_status {
         $self->notagged_send($answer);
         $self->{logger}->debug(">>>: $answer");
         $self->tagged_send("OK STATUS completed", $cmd_num);
-        $self->{logger}->debug(">>>: OK STATUS completed");
+        $self->{logger}->debug(">>>: $cmd_num OK STATUS completed");
         return 1;
     }
     $self->tagged_send("BAD STATUS error", $cmd_num);
-    $self->{logger}->debug(">>>: BAD STATUS error");
+    $self->{logger}->debug(">>>: $cmd_num BAD STATUS error");
     return 1;
 }
 
@@ -812,7 +812,7 @@ sub run_cmd_select {
     unless ($select =~ /^\w+\s+(SELECT|EXAMINE)\s+(\S+)\s*$/i) {
         $self->{selected_folder} = "";
         $self->tagged_send("BAD SELECT error", $cmd_num);
-        $self->{logger}->debug(">>>: BAD SELECT error");
+        $self->{logger}->debug(">>>: $cmd_num BAD SELECT error");
         return 1;
     }
     my $folder_with_quotes = $2;
@@ -843,12 +843,12 @@ sub run_cmd_select {
     if ($is_examine) {
         $self->{is_read_only} = 1;
         $self->tagged_send("OK [READ-ONLY] EXAMINE completed", $cmd_num);
-        $self->{logger}->debug(">>>: OK [READ-ONLY] EXAMINE completed");
+        $self->{logger}->debug(">>>: $cmd_num OK [READ-ONLY] EXAMINE completed");
     }
     else {
         $self->{is_read_only} = 0;
         $self->tagged_send("OK [READ-WRITE] SELECT completed", $cmd_num);
-        $self->{logger}->debug(">>>: OK [READ-WRITE] SELECT completed");
+        $self->{logger}->debug(">>>: $cmd_num OK [READ-WRITE] SELECT completed");
     }
     return 1;
 }
@@ -872,7 +872,7 @@ sub run_cmd_store {
     my $folder  = $self->{selected_folder};
     unless (defined $folder) {
         $self->tagged_send("NO STORE error: no folder selected", $cmd_num);
-        $self->{logger}->debug(">>>: NO STORE error: no folder selected");
+        $self->{logger}->debug(">>>: $cmd_num NO STORE error: no folder selected");
         return 1;
     }
     unless (defined $self->{fetch_num}->{$folder}) {
@@ -881,7 +881,7 @@ sub run_cmd_store {
     if ($store =~ /^\s*\w+\s+STORE\s+([\d\:\*\,]+)\s+(\+?\-?FLAGS)(\.SILENT)?\s*\(([\w\s\\]*)\)\s*$/i) {
         unless ($1 or $2) {
             $self->tagged_send("BAD STORE error: uncorrect arguments", $cmd_num);
-            $self->{logger}->debug(">>>: BAD STORE error: uncorrect arguments");
+            $self->{logger}->debug(">>>: $cmd_num BAD STORE error: uncorrect arguments");
             return 1;
         }
 
@@ -965,7 +965,7 @@ sub run_cmd_store {
         }
     }
     $self->tagged_send("OK STORE completed", $cmd_num);
-    $self->{logger}->debug(">>>: OK STORE completed");
+    $self->{logger}->debug(">>>: $cmd_num OK STORE completed");
     return 1;
 }
 
@@ -977,7 +977,7 @@ sub run_cmd_fetch {
     my $folder  = $self->{selected_folder};
     unless (defined $folder) {
         $self->tagged_send("NO EXPUNGE error: no folder selected", $cmd_num);
-        $self->{logger}->debug(">>>: NO EXPUNGE error: no folder selected");
+        $self->{logger}->debug(">>>: $cmd_num NO EXPUNGE error: no folder selected");
         return 1;
     }
     unless (defined $self->{fetch_num}->{$folder}) {
@@ -1057,7 +1057,7 @@ sub run_cmd_fetch {
             $self->{logger}->debug(">>>: $answer");
             $self->notagged_send($answer);
         }
-        $self->{logger}->debug(">>>: OK FETCH completed");
+        $self->{logger}->debug(">>>: $cmd_num OK FETCH completed");
         $self->tagged_send("OK FETCH completed", $cmd_num);
         return 1;
     }
@@ -1134,17 +1134,17 @@ sub run_cmd_delete {
         $del_folder = $1;
     }
     unless ($folders{$del_folder}) {
-        $self->{logger}->debug(">>>: NO DELETE error");
+        $self->{logger}->debug(">>>: $cmd_num NO DELETE error");
         $self->tagged_send("NO DELETE error", $cmd_num);
     }
     if ($del_folder =~ /Inbox/i) {
-        $self->{logger}->debug(">>>: NO DELETE error");
+        $self->{logger}->debug(">>>: $cmd_num NO DELETE error");
         $self->tagged_send("NO DELETE error", $cmd_num);
         return 1;
     }
     foreach my $flag (@{$folders{$del_folder}{"flags"}}) {
         if ($flag =~ /Noselect/i) {
-            $self->{logger}->debug(">>>: NO DELETE error");
+            $self->{logger}->debug(">>>: $cmd_num NO DELETE error");
             $self->tagged_send("NO DELETE error", $cmd_num);
             return 1;
         }
@@ -1155,7 +1155,7 @@ sub run_cmd_delete {
             delete($test->{$del_folder});
         }
     }
-    $self->{logger}->debug(">>>: OK DELETE completed");
+    $self->{logger}->debug(">>>: $cmd_num OK DELETE completed");
     $self->tagged_send("OK DELETE completed", $cmd_num);
     return 1;
 }
@@ -1175,7 +1175,7 @@ sub run_cmd_rename {
         $source = $1;
     }
     unless ($destiny or $$source) {
-        $self->{logger}->debug(">>>: BAD RENAME error");
+        $self->{logger}->debug(">>>: $cmd_num BAD RENAME error");
         $self->tagged_send("BAD RENAME error", $cmd_num);
         return 1;
     }
@@ -1191,7 +1191,7 @@ sub run_cmd_rename {
             %{$test->{"Inbox"}} = ();
         }
     }
-    $self->{logger}->debug(">>>: OK RENAME completed");
+    $self->{logger}->debug(">>>: $cmd_num OK RENAME completed");
     $self->tagged_send("OK RENAME completed", $cmd_num);
     return 1;
 }
@@ -1204,7 +1204,7 @@ sub run_cmd_expunge {
     my $folder  = $self->{selected_folder};
     unless ($self->{selected_folder}) {
         $self->tagged_send("NO EXPUNGE error: no folder selected", $cmd_num);
-        $self->{logger}->debug(">>>: NO EXPUNGE error: no folder selected");
+        $self->{logger}->debug(">>>: $cmd_num NO EXPUNGE error: no folder selected");
         return 1;
     }
     foreach my $uid (keys %{$folders{$self->{selected_folder}}->{uids}}) {
@@ -1215,7 +1215,7 @@ sub run_cmd_expunge {
         }
     }
     $self->{selected_folder} = "";
-    $self->{logger}->debug(">>>: OK EXPUNGE completed");
+    $self->{logger}->debug(">>>: $cmd_num OK EXPUNGE completed");
     $self->tagged_send("OK EXPUNGE completed", $cmd_num);
     return 1;
 }
@@ -1227,7 +1227,7 @@ sub run_cmd_close {
     my %folders = %{$self->{test}[$self->{connection_number}]};
     my $folder  = $self->{selected_folder};
     unless ($self->{selected_folder}) {
-        $self->{logger}->debug(">>>: NO CLOSE error: no folder selected");
+        $self->{logger}->debug(">>>: $cmd_num NO CLOSE error: no folder selected");
         $self->tagged_send("NO CLOSE error: no folder selected", $cmd_num);
         return 1;
     }
@@ -1239,7 +1239,7 @@ sub run_cmd_close {
         }
     }
     $self->{selected_folder} = "";
-    $self->{logger}->debug(">>>: OK CLOSE completed");
+    $self->{logger}->debug(">>>: $cmd_num OK CLOSE completed");
     $self->tagged_send("OK CLOSE completed", $cmd_num);
     return 1;
 
@@ -1249,12 +1249,12 @@ sub run_cmd_unselect {
     my $self = shift;
     my ($cmd_num, $unselect) = @_;
     unless ($self->{selected_folder}) {
-        $self->{logger}->debug(">>>: BAD UNSELECT error: no folder selected");
+        $self->{logger}->debug(">>>: $cmd_num BAD UNSELECT error: no folder selected");
         $self->tagged_send("BAD UNSELECT error: no folder selected", $cmd_num);
         return 1;
     }
     $self->{selected_folder} = "";
-    $self->{logger}->debug(">>>: OK UNSELECT completed");
+    $self->{logger}->debug(">>>: $cmd_num OK UNSELECT completed");
     $self->tagged_send("OK UNSELECT completed", $cmd_num);
     return 1;
 }
