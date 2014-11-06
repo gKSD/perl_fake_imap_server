@@ -129,6 +129,26 @@ sub do_parse {
             push @{$brackets}, '}'; #type of expected closing bracket
             print "brackets: ".Dumper(@{$brackets})."\n";
             if ($is_ar) {
+                if (!$is_first) {
+                    if ($prev_line =~ /^\s*\[\s*([^\f\n\r\t\v]*)\s*\]\,?\s*$/) {
+                        my $value = $1;
+                        my @ar = split (/, */, $value);
+                        my $n = $#ar + 1;
+                        for (my $i = 0; $i < $n; $i++) {
+                            if ($ar[$i] =~ /^\"(.*)\"$/) {$ar[$i] = $1;}
+                        }
+                        push @{$it}, \@ar;
+                        $is_first = 1;
+                    }
+                    elsif ($prev_line =~ /^\"(.*)\"$/) {
+                        push @{$it}, $1;
+                    }
+                    else{
+                        $prev_line =~ s/\s+$//g;
+                        if ($prev_line =~ /[\:\,\;\-\=]$/) { chop $prev_line;}
+                        push @{$it}, $prev_line;
+                    }
+                }
                 my %hash;
                 push @{$it}, \%hash;
                 if (do_parse($fh, \%{$it->[-1]}, 0, $brackets) <= 0) {return -1;}
@@ -147,6 +167,27 @@ sub do_parse {
             print "brackets: ".Dumper(@{$brackets})."\n";
             if (!$is_ar and $is_first) {return -1;}
             if ($is_ar) {
+                if (!$is_first) {
+                    if ($prev_line =~ /^\s*\[\s*([^\f\n\r\t\v]*)\s*\]\,?\s*$/) {
+                        my $value = $1;
+                        my @ar = split (/, */, $value);
+                        my $n = $#ar + 1;
+                        for (my $i = 0; $i < $n; $i++) {
+                            if ($ar[$i] =~ /^\"(.*)\"$/) {$ar[$i] = $1;}
+                        }
+                        push @{$it}, \@ar;
+                        $is_first = 1;
+                    }
+                    elsif ($prev_line =~ /^\"(.*)\"$/) {
+                        push @{$it}, $1;
+                    }
+                    else{
+                        $prev_line =~ s/\s+$//g;
+                        if ($prev_line =~ /[\:\,\;\-\=]$/) { chop $prev_line;}
+                        push @{$it}, $prev_line;
+                    }
+                    #push @{$it}, $prev_line;
+                }
                 my @ar;
                 push @{$it}, \@ar;
                 if (do_parse($fh, \@{$it->[-1]}, 1, $brackets) <= 0) {return -1;}
@@ -167,7 +208,25 @@ sub do_parse {
                 return -1;
             }
             if (!$is_first) {
-                push @{$it}, $prev_line;
+                if ($prev_line =~ /^\s*\[\s*([^\f\n\r\t\v]*)\s*\]\,?\s*$/) {
+                    my $value = $1;
+                    my @ar = split (/, */, $value);
+                    my $n = $#ar + 1;
+                    for (my $i = 0; $i < $n; $i++) {
+                        if ($ar[$i] =~ /^\"(.*)\"$/) {$ar[$i] = $1;}
+                    }
+                    push @{$it}, \@ar;
+                    $is_first = 1;
+                }
+                elsif ($prev_line =~ /^\"(.*)\"$/) {
+                    push @{$it}, $1;
+                }
+                else{
+                    $prev_line =~ s/\s+$//g;
+                    if ($prev_line =~ /[\:\,\;\-\=]$/) { chop $prev_line;}
+                    push @{$it}, $prev_line;
+                }
+                #push @{$it}, $prev_line;
             }
             return 1;
         }
@@ -193,10 +252,14 @@ sub do_parse {
             $prev_line = $_;
             $is_first = 0;
             print "LINE is **$_**\n";
-            if (/^(\w+)[:]?\s*[\(\[]\s*([\s\,\w\(\)]*)[\]\)]\,?\s*$/) {
+            if (/^(\w+)[:]?\s*[\(\[]\s*([^\f\n\r\t\v]*)[\]\)]\,?\s*$/) {
                 my $key = $1;
                 my $value = $2;
                 my @ar = split (/, */, $value);
+                my $n = $#ar + 1;
+                for (my $i = 0; $i < $n; $i++) {
+                    if ($ar[$i] =~ /^\"(.*)\"$/) {$ar[$i] = $1;}
+                }
                 @{$it->{$key}} = @ar;
                 print "it {} after little push: ".Dumper($it)."\n";
                 $is_first = 1;
@@ -208,14 +271,19 @@ sub do_parse {
             elsif (/(.*):\s*$/) {
                 $prev_line = $1;
             }
-            elsif (/^(\w+)\s*\:\"?\s*(\w+)\s*\"?\s*\,?$/) {
+            elsif (/^(\w+)\s*\:\"?\s*(\S+)\s*\"?\s*\,?$/) {
                 $it->{$1} = $2;
                 print "it {} after little push: ".Dumper($it)."\n";
                 $is_first = 1;
             }
-            elsif (/^\s*\[\s*([\s\,\w\(\)]*)\s*\]\,?\s*$/) {
+            elsif (/^\s*\[\s*([^\f\n\r\t\v]*)\s*\]\,?\s*$/) {
+                print "OMNOOMNOOMNO\n";
                 my $value = $1;
                 my @ar = split (/, */, $value);
+                my $n = $#ar + 1;
+                for (my $i = 0; $i < $n; $i++) {
+                    if ($ar[$i] =~ /^\"(.*)\"$/) {$ar[$i] = $1;}
+                }
                 push @{$it}, \@ar;
                 $is_first = 1;
             }
@@ -226,7 +294,24 @@ sub do_parse {
             ### TODO обработать первый элемент, все равно массива или хэша вида a:1, при этом $is_first снова станет равным 1
         } else {
             if ($is_ar) {
-                push @{$it}, $prev_line;
+                if ($prev_line =~ /^\s*\[\s*([^\f\n\r\t\v]*)\s*\]\,?\s*$/) {
+                    my $value = $1;
+                    my @ar = split (/, */, $value);
+                    my $n = $#ar + 1;
+                    for (my $i = 0; $i < $n; $i++) {
+                        if ($ar[$i] =~ /^\"(.*)\"$/) {$ar[$i] = $1;}
+                    }
+                    push @{$it}, \@ar;
+                    $is_first = 1;
+                }
+                elsif ($prev_line =~ /^\"(.*)\"$/) {
+                    push @{$it}, $1;
+                }
+                else{
+                    $prev_line =~ s/\s+$//g;
+                    if ($prev_line =~ /[\:\,\;\-\=]$/) { chop $prev_line;}
+                    push @{$it}, $prev_line;
+                }
                 $prev_line = $_;
             } else {
                 print "000 Syntax error in config, check {} or [] brackets, ".Dumper(@{$brackets})."\n"; 

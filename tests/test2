@@ -17,15 +17,15 @@ imap
 test
 [
      {
-        Inbox: 
+        Inbox:     
         {
             uids
             {
                 1
                 [
-                    seen
-                    recent
-                    09-Jul-2014 09:21:57 +0000
+                    seen,
+                    recent,   
+                    09-Jul-2014 09:21:57 +0000;
                     deleted
                 ],
                 3
@@ -41,7 +41,7 @@ test
                     09-Jul-2014 09:21:57 +0000
                 ]
             }
-            flags [ hashnochildren, noselect]
+            flags [ "&%^%^&hashnochildren", noselect]
             uidvalidity : 13123
         }
         test
@@ -52,10 +52,16 @@ test
                 [
                 recent
                 09-Jul-2014 09:21:57 +0000
+                ["*&(^*%&*^%&^", qqqqqq]
                 ],
                 11
                 [
                 recent
+                [
+                    sssss
+                    xxxxx
+                    vvvvv
+                ]
                 09-Jul-2014 09:21:57 +0000
                 ],
             }
