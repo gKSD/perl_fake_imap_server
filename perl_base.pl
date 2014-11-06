@@ -192,8 +192,6 @@ sub do_parse {
         if ($is_first) {
             $prev_line = $_;
             $is_first = 0;
-
-
             print "LINE is **$_**\n";
             if (/^(\w+)[:]?\s*[\(\[]\s*([\s\,\w\(\)]*)[\]\)]\,?\s*$/) {
                 my $key = $1;

@@ -1124,10 +1124,6 @@ sub run_cmd_delete {
     my %folders = %{$self->{test}[$self->{connection_number}]};
     unless (%folders) {return -1;}
     
-    #unless ($delete =~ /^\s*\w+\s+DELETE\s+\"?(\w+)\"?\s*$/i) {
-    #    return -1;
-    #}
-
     my @ar = split('\s', $delete);
     my $del_folder = $ar[2];
     if ($ar[2] =~ /^\"(.+)\"$/) {
@@ -1576,8 +1572,8 @@ sub parse_test_file1 {
             $fh->close();
             return -1;
         } else {
-            $self->{test} = \@{$glhash{test}}; #\@test;
-            $self->{imap} = \%{$glhash{imap}}; #\%imap;
+            $self->{test} = \@{$glhash{test}};
+            $self->{imap} = \%{$glhash{imap}};
         }
     };
     if ($@) {
@@ -1585,7 +1581,6 @@ sub parse_test_file1 {
     }
 
     $fh->close();
-    #print Dumper(%glhash);
 }
 
 sub do_parse {
