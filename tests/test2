@@ -23,18 +23,21 @@ test
             {
                 1
                 [
-                    seen,
+                    seen
                     recent
                     09-Jul-2014 09:21:57 +0000
+                    deleted
                 ],
                 3
                 [
                 recent
+                seen
                 09-Jul-2014 09:21:57 +0000
+                deleted
                 ],
                 5
                 [
-                    RECENT,
+                    RECENT
                     09-Jul-2014 09:21:57 +0000
                 ]
             }
@@ -59,15 +62,15 @@ test
         }
      }
      {
-        inbox
+        Inbox
         {
             uids
             {
-                002 [seen,answered],
-                005
+                2 [seen,answered],
+                5
                 [
-                    seen,
-                    answered,
+                    seen
+                    answered
                     09-Jul-2014 09:21:57 +0000
                 ],
             }

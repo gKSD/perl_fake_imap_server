@@ -4,23 +4,17 @@ package fake_imap_server;
 use strict;
 use warnings;
 
-#use Socket qw(inet_aton inet_ntoa AF_INET AF_UNIX SOCK_DGRAM SOCK_STREAM);
 use IO::Socket;
 use IO::File;
 use strict;
 use warnings;
 use Switch;
 use Data::Dumper;
-#use POSIX qw(WNOHANG);
-#use POSIX qw(setsid);
 use POSIX;
 use POSIX ":sys_wait_h";
 use Log::Log4perl qw(:easy);
 
-#use Proc::Daemon;
-#Proc::Daemon::Init;
 
-#TODO: сделать демона из этого!!!!!!!!!!!!
 my $pid = fork();
 exit() if $pid;
 die "Couldn't fork: $! " unless defined($pid);
@@ -100,9 +94,12 @@ sub new {
     $self->{imap} = undef;                              # сценарий ответов
     $self->{test} = undef;                              # хранение тестов
     $self->{logger} = undef;
-    $self->{connection_number} = 0;
+    $self->{connection_number} = -1;
     $self->{selected_folder} = "";
     $self->{fetch_num} = {};
+    $self->{is_read_only} = 0;
+    $self->{state} = 0;
+    #States: 0 - non-authenticated, 1 - authenticated, 2 - selected, 3 - logout
 
     bless $self, $class;
 
@@ -167,6 +164,7 @@ sub run {
     {
         $SIG{CHLD} = 'IGNORE';
         my $pid;
+        $self->{connection_number}++;
         while (not defined ($pid = fork()))
         {
             sleep 5;
@@ -192,9 +190,8 @@ sub process_request {
         $mode = ($self->{init_params}->{"mode"} eq "config" ? 1: 0);
     }
     my $cmd_num;
-
-    $self->{logger}->debug("mode = $mode");
-
+    my $bad_commands = 0;;
+    $self->{state} = 0;
     $self->{logger}->info("client connected to pid $$");
     print $client "* OK Welcome to Fake Imap Server\r\n";
 
@@ -202,41 +199,33 @@ sub process_request {
         chomp $line;
         if ($line =~ /^\s*(\w+)\s/) {
             $cmd_num = $1;
+            $bad_commands = 0;
         }
         else {
-            #not well formed command! error, die
-            #send something as an answer to client to inform that command is incorrect
+            $self->notagged_send("BAD Unrecognised command (non-authenticated state)");
+            $self->{logger}->debug(">>>: BAD Unrecognised command (non-authenticated state)");
+            $self->{selected_folder} = "";
+            $bad_commands++;
+            if ($self->check_bad_commands($bad_commands)) {last;}
+            next;
         }
-
+        #$self->{selected_folder} = "Inbox";
+        #$line = "A003 STORE 1:* -FLAGS (\\Deleted)";
+        #$line = "A003 LOGOUT";
         $self->{logger}->debug("<<<: $line");
 
         if ($line =~ /login/i) {
-            $self->{logger}->debug("123 ".Dumper($self->{imap}));
             if ($mode) {
                 if ($self->{imap}->{login}) {
                     if ($self->send_answer_from_config($self->{imap}->{login}, $cmd_num)) {
+                        $self->{state} = 1;
                         next;
                     }
-=begin
-                    my $n = $#{$self->{imap}->{login}} + 1;
-                    if ($n > 0) {
-                        for (my $i = 0; $i < $n; $i++) {
-                            my $answer = $self->{imap}->{login}[$i];
-                            $self->{logger}->debug(">>>: $answer");
-
-                            if ($i == $n - 1) {
-                                $self->tagged_send($answer, $cmd_num);
-                                next;
-                            }
-                            $self->notagged_send($answer);
-                        }
-                        next;
-                    }
-=cut
                 }
             }
             $self->{logger}->debug(">>>: OK LOGIN completed");
             $self->tagged_send("OK LOGIN completed", $cmd_num);
+            $self->{state} = 1;
         }
         elsif ($line =~ /capability/i) {
             if ($mode) {
@@ -253,6 +242,11 @@ sub process_request {
             $self->tagged_send("OK capability complited", $cmd_num);
         }
         elsif ($line =~ /namespace/i) {
+            if ($self->{state} == 0) {
+                $self->tagged_send("BAD Error in IMAP command received by Fake Imap Server.", $cmd_num);
+                if ($self->check_bad_commands($bad_commands)) {last;}
+                next;
+            }
             if ($mode) {
                 if ($self->{imap}->{namespace}) {
                     if ($self->send_answer_from_config($self->{imap}->{namespace}, $cmd_num)) {
@@ -278,8 +272,12 @@ sub process_request {
             $self->{logger}->debug(">>>: OK NOOP completed");
             $self->tagged_send("OK NOOP completed", $cmd_num);
         }
-        elsif ($line =~ /list/i) {
-            #same with xlist
+        elsif ($line =~ /list/i) { #same with xlist
+            if ($self->{state} == 0) {
+                $self->tagged_send("BAD Error in IMAP command received by Fake Imap Server.", $cmd_num);
+                if ($self->check_bad_commands($bad_commands)) {last;}
+                next;
+            }
             if ($mode) {
                 if ($self->{imap}->{list}) {
                     if ($self->send_answer_from_config($self->{imap}->{list}, $cmd_num)) {
@@ -307,12 +305,23 @@ sub process_request {
                     if ($self->send_answer_from_config($self->{imap}->{logout}, $cmd_num)) {
                         next;
                     }
+                    if ($self->run_cmd_logout($cmd_num)) {
+                        last;
+                        #next;
+                    }
                 }
             }
             $self->notagged_send("BYE Fake Imap Server logging out");
             $self->tagged_send("OK LOGOUT completed", $cmd_num);
+            close $self->{client};
+            last;
         }
         elsif ($line =~ /status/i) {
+            if ($self->{state} == 0) {
+                $self->tagged_send("BAD Error in IMAP command received by Fake Imap Server.", $cmd_num);
+                if ($self->check_bad_commands($bad_commands)) {last;}
+                next;
+            }
             if ($mode) {
                 if ($self->{imap}->{status}) {
                     if ($self->send_answer_from_config($self->{imap}->{status}, $cmd_num)) {
@@ -335,18 +344,30 @@ sub process_request {
 
         }
         elsif ($line =~ /select/i) {
+            if ($self->{state} == 0) {
+                $self->tagged_send("BAD Error in IMAP command received by Fake Imap Server.", $cmd_num);
+                if ($self->check_bad_commands($bad_commands)) {last;}
+                next;
+            }
+            $self->{state} = 1;
+            $self->{selected_folder} = "";
             if ($mode) {
                 if ($self->{imap}->{"select"}) {
                     if ($self->send_answer_from_config($self->{imap}->{"select"}, $cmd_num)) {
+                        $self->{state} = 2;
                         next;
                     }
                 }
                 if ($self->run_cmd_select($cmd_num, $line, 0)) {
+                    $self->{state} = 2;
                     next;
                 }
             }
             unless ($line =~ /^\w+\s+SELECT\s+(\S+)\s*$/i) {
-                ###?????
+                $self->{state} = 1;
+                $self->tagged_send("BAD Error in IMAP command received by Fake Imap Server.", $cmd_num);
+                if ($self->check_bad_commands($bad_commands)) {last;}
+                next;
             }
             my $folder_with_quotes = $1;
             my $folder = (($folder_with_quotes =~ /^\"(.+)\"$/)? $1: $folder_with_quotes); 
@@ -354,30 +375,47 @@ sub process_request {
 
             $self->notagged_send("0 exists");
             $self->tagged_send("OK [READ-WRITE] SELECT Completed", $cmd_num);
+            $self->{state} = 2;
         }
         elsif ($line =~ /examine/i) {
+            if ($self->{state} == 0) {
+                $self->tagged_send("BAD Error in IMAP command received by Fake Imap Server.", $cmd_num);
+                if ($self->check_bad_commands($bad_commands)) {last;}
+                next;
+            }
+            $self->{state} = 1;
+            $self->{selected_folder} = "";
             if ($mode) {
                 if ($self->{imap}->{"examine"}) {
                     if ($self->send_answer_from_config($self->{imap}->{"examine"}, $cmd_num)) {
+                        $self->{state} = 2;
                         next;
                     }
                 }
                 if ($self->run_cmd_select($cmd_num, $line, 1)) {
+                    $self->{state} = 2;
                     next;
                 }
             }
             unless ($line =~ /^\w+\s+EXAMINE\s+(\S+)\s*$/i) {
-                ###?????
+                $self->{state} = 1;
+                $self->tagged_send("BAD Error in IMAP command received by Fake Imap Server.", $cmd_num);
+                if ($self->check_bad_commands($bad_commands)) {last;}
+                next;
             }
             my $folder_with_quotes = $1;
             my $folder = (($folder_with_quotes =~ /^\"(.+)\"$/)? $1: $folder_with_quotes); 
             $self->{selected_folder} = $folder;
-
             $self->notagged_send("0 exists");
             $self->tagged_send("OK [READ-ONLY] EXAMINE Completed", $cmd_num);
-
+            $self->{state} = 2;
         }
         elsif ($line =~ /fetch/i) {
+            unless ($self->{state} == 2) {
+                $self->tagged_send("BAD Error in IMAP command received by Fake Imap Server.", $cmd_num);
+                if ($self->check_bad_commands($bad_commands)) {last;}
+                next;
+            }
             if ($mode) {
                 if ($self->{imap}->{"fetch-body"}) {
                     if ($self->send_answer_from_config($self->{imap}->{"fetch-body"}, $cmd_num)) {
@@ -394,43 +432,274 @@ sub process_request {
                 }
 
             }
+            if ($line =~ /body/) {
+                $self->send_fake_msg($cmd_num);
+            }
+            else {
+                $self->{logger}->debug(">>>: FETCH (UID 2147483647 FLAGS (\\Seen) INTERNALDATE \" 2-May-2014 17:12:07 +0000\")");
+                $self->notagged_send("FETCH (UID 2147483647 FLAGS (\\Seen) INTERNALDATE \" 2-May-2014 17:12:07 +0000\")");
+                $self->{logger}->debug(">>>: OK FETCH completed");
+                $self->tagged_send("OK FETCH completed", $cmd_num);
+            }
         }
-        elsif ($line =~ /id/i)
-        {}
- 
-        elsif ($line =~ /create/i)
-        {}
-        elsif ($line =~ /delete/i)
-        {}
-        elsif ($line =~ /rename/i)
-        {}
-        elsif ($line =~ /subscribe/i)
-        {}
-        elsif ($line =~ /unsubscribe/i)
-        {}
-        elsif ($line =~ /lsub/i)
-        {}
-        elsif ($line =~ /append/i)
-        {}
-        elsif ($line =~ /check/i)
-        {}
-        elsif ($line =~ /unselect/i)
-        {}
-        elsif ($line =~ /expunge/i)
-        {}
-        elsif ($line =~ /search/i)
-        {}
-        elsif ($line =~ /store/i)
-        {}
-        elsif ($line =~ /copy/i)
-        {}
-        elsif ($line =~ /move/i)
-        {}
-        elsif ($line =~ /close/i)
-        {}
-
-        #$self->{logger}->debug( "client> ".$line);
-        #print $client "pid $$ > ".$line."\r\n";
+        elsif ($line =~ /create/i) {
+            if ($self->{state} == 0) {
+                $self->tagged_send("BAD Error in IMAP command received by Fake Imap Server.", $cmd_num);
+                if ($self->check_bad_commands($bad_commands)) {last;}
+                next;
+            }
+            if ($mode) {
+                if ($self->{imap}->{"create"}) {
+                    if ($self->send_answer_from_config($self->{imap}->{"create"}, $cmd_num)) {
+                        next;
+                    }
+                } 
+            }
+            $self->tagged_send("NO CREATE error", $cmd_num);
+            $self->{logger}->debug(">>>: NO CREATE error"); 
+        }
+        elsif ($line =~ /rename/i) {
+            if ($self->{state} == 0) {
+                $self->tagged_send("BAD Error in IMAP command received by Fake Imap Server.", $cmd_num);
+                if ($self->check_bad_commands($bad_commands)) {last;}
+                next;
+            }
+            if ($mode) {
+                if ($self->{imap}->{"rename"}) {
+                    if ($self->send_answer_from_config($self->{imap}->{"rename"}, $cmd_num)) {
+                        next;
+                    }
+                }
+                if ($self->run_cmd_rename($cmd_num, $line)) {
+                    next;
+                }
+            }
+            $self->tagged_send("NO RENAME error", $cmd_num); 
+            $self->{logger}->debug(">>>: NO RENAME error");
+        }
+        elsif ($line =~ /subscribe/i) {
+            if ($self->{state} == 1) {
+                $self->tagged_send("BAD Error in IMAP command received by Fake Imap Server.", $cmd_num);
+                if ($self->check_bad_commands($bad_commands)) {last;}
+                next;
+            }
+            if ($mode) {
+                if ($self->{imap}->{"subscribe"}) {
+                    if ($self->send_answer_from_config($self->{imap}->{"subscribe"}, $cmd_num)) {
+                        next;
+                    }
+                }
+            }
+            $self->tagged_send("BAD SUBSCRIBE error: unsupported command", $cmd_num);
+            $self->{logger}->debug(">>>: BAD SUBSCRIBE error: unsupported command", $cmd_num);
+        }
+        elsif ($line =~ /unsubscribe/i) {
+            if ($self->{state} == 1) {
+                $self->tagged_send("BAD Error in IMAP command received by Fake Imap Server.", $cmd_num);
+                if ($self->check_bad_commands($bad_commands)) {last;}
+                next;
+            }
+            if ($mode) {
+                if ($self->{imap}->{"unsubscribe"}) {
+                    if ($self->send_answer_from_config($self->{imap}->{"unsubscribe"}, $cmd_num)) {
+                        next;
+                    }
+                }
+            }
+            $self->tagged_send("BAD UNSUBSCRIBE error: unsupported command", $cmd_num);
+            $self->{logger}->debug(">>>: BAD UNSUBSCRIBE error: unsupported command", $cmd_num);
+        }
+        elsif ($line =~ /lsub/i) {
+            if ($self->{state} == 1) {
+                $self->tagged_send("BAD Error in IMAP command received by Fake Imap Server.", $cmd_num);
+                if ($self->check_bad_commands($bad_commands)) {last;}
+                next;
+            }
+            if ($mode) {
+                if ($self->{imap}->{"lsub"}) {
+                    if ($self->send_answer_from_config($self->{imap}->{"lsub"}, $cmd_num)) {
+                        next;
+                    }
+                }
+            }
+            $self->tagged_send("BAD LSUB error: unsupported command", $cmd_num);
+            $self->{logger}->debug(">>>: BAD LSUB error: unsupported command", $cmd_num);
+        }
+        elsif ($line =~ /append/i) {
+            if ($self->{state} == 1) {
+                $self->tagged_send("BAD Error in IMAP command received by Fake Imap Server.", $cmd_num);
+                if ($self->check_bad_commands($bad_commands)) {last;}
+                next;
+            }
+            if ($mode) {
+                if ($self->{imap}->{"append"}) {
+                    if ($self->send_answer_from_config($self->{imap}->{"append"}, $cmd_num)) {
+                        next;
+                    }
+                }
+            }
+            $self->tagged_send("BAD APPEND error: unsupported command", $cmd_num);
+            $self->{logger}->debug(">>>: BAD APPEND error: unsupported command", $cmd_num);
+        }
+        elsif ($line =~ /check/i) {
+            unless ($self->{state} == 2) {
+                $self->tagged_send("BAD Error in IMAP command received by Fake Imap Server.", $cmd_num);
+                if ($self->check_bad_commands($bad_commands)) {last;}
+                next;
+            }
+            if ($mode) {
+                if ($self->{imap}->{"check"}) {
+                    if ($self->send_answer_from_config($self->{imap}->{"check"}, $cmd_num)) {
+                        next;
+                    }
+                }
+            }
+            $self->tagged_send("OK CHECK completed", $cmd_num); 
+            $self->{logger}->debug(">>>: OK CHECK completed");
+        }
+        elsif ($line =~ /unselect/i) {
+            if ($self->{state} == 0) {
+                $self->tagged_send("BAD Error in IMAP command received by Fake Imap Server.", $cmd_num);
+                if ($self->check_bad_commands($bad_commands)) {last;}
+                next;
+            }
+            $self->{state} = 1;
+            $self->{selected_folder} = "";
+            if ($mode) {
+                if ($self->{imap}->{"unselect"}) {
+                    if ($self->send_answer_from_config($self->{imap}->{"unselect"}, $cmd_num)) {
+                        next;
+                    }
+                }
+                if ($self->run_cmd_unselect($cmd_num, $line)) {
+                    next;
+                }
+            }
+            $self->tagged_send("OK UNSELECT completed", $cmd_num); 
+            $self->{logger}->debug(">>>: OK UNSELECT completed");
+        }
+        elsif ($line =~ /expunge/i) {
+            unless ($self->{state} == 2) {
+                $self->tagged_send("BAD Error in IMAP command received by Fake Imap Server.", $cmd_num);
+                if ($self->check_bad_commands($bad_commands)) {last;}
+                next;
+            }
+            if ($mode) {
+                if ($self->{imap}->{"expunge"}) {
+                    if ($self->send_answer_from_config($self->{imap}->{"expunge"}, $cmd_num)) {
+                        next;
+                    }
+                }
+                if ($self->run_cmd_expunge($cmd_num, $line)) {
+                    next;
+                }
+            }
+            $self->tagged_send("OK EXPUNGE completed", $cmd_num); 
+            $self->{logger}->debug(">>>: OK EXPUNGE completed");
+        }
+        elsif ($line =~ /search/i) {
+           unless ($self->{state} == 2) {
+                $self->tagged_send("BAD Error in IMAP command received by Fake Imap Server.", $cmd_num);
+                if ($self->check_bad_commands($bad_commands)) {last;}
+                next;
+           }
+           if ($mode) {
+                if ($self->{imap}->{"search"}) {
+                    if ($self->send_answer_from_config($self->{imap}->{"search"}, $cmd_num)) {
+                        next;
+                    }
+                }
+            }
+            $self->tagged_send("BAD SEARCH error: unsupported command", $cmd_num);
+            $self->{logger}->debug(">>>: BAD SEARCH error: unsupported command", $cmd_num);
+        }
+        elsif ($line =~ /store/i) {
+            unless ($self->{state} == 2) {
+                $self->tagged_send("BAD Error in IMAP command received by Fake Imap Server.", $cmd_num);
+                if ($self->check_bad_commands($bad_commands)) {last;}
+                next;
+            }
+            if ($mode) {
+                if ($self->{imap}->{"store"}) {
+                    if ($self->send_answer_from_config($self->{imap}->{"store"}, $cmd_num)) {
+                        next;
+                    }
+                }
+                if ($self->run_cmd_store($cmd_num, $line)) {
+                    next;
+                }
+            }
+            $self->tagged_send("OK STORE completed", $cmd_num); 
+            $self->{logger}->debug(">>>: OK STORE completed");
+        }
+        elsif ($line =~ /uid copy/i) {
+            unless ($self->{state} == 2) {
+                $self->tagged_send("BAD Error in IMAP command received by Fake Imap Server.", $cmd_num);
+                if ($self->check_bad_commands($bad_commands)) {last;}
+                next;
+            }
+            if ($mode) {
+                if ($self->{imap}->{"copy"}) {
+                    if ($self->send_answer_from_config($self->{imap}->{"copy"}, $cmd_num)) {
+                        next;
+                    }
+                }
+            }
+            $self->tagged_send("NO COPY error", $cmd_num);
+            $self->{logger}->debug(">>>: NO COPY error");
+        }
+        elsif ($line =~ /close/i) {
+            unless ($self->{state} == 2) {
+                $self->tagged_send("BAD Error in IMAP command received by Fake Imap Server.", $cmd_num);
+                if ($self->check_bad_commands($bad_commands)) {last;}
+                next;
+            }
+            $self->{selected_folder} = "";
+            $self->{state} = 1;
+            if ($mode) {
+                if ($self->{imap}->{"close"}) {
+                    if ($self->send_answer_from_config($self->{imap}->{"close"}, $cmd_num)) {
+                        next;
+                    }
+                }
+                if ($self->run_cmd_close($cmd_num, $line)) {
+                    next;
+                }
+            }
+            $self->tagged_send("OK CLOSE completed", $cmd_num); 
+            $self->{logger}->debug(">>>: OK CLOSE completed");
+        }
+        elsif ($line =~ /delete/i) {
+            if ($self->{state} == 0) {
+                $self->tagged_send("BAD Error in IMAP command received by Fake Imap Server.", $cmd_num);
+                if ($self->check_bad_commands($bad_commands)) {last;}
+                next;
+            }
+            if ($mode) {
+                if ($self->{imap}->{"delete"}) {
+                    if ($self->send_answer_from_config($self->{imap}->{"delete"}, $cmd_num)) {
+                        next;
+                    }
+                }
+                if ($self->run_cmd_delete($cmd_num, $line)) {
+                        next;
+                }
+            }
+            $self->tagged_send("OK DELETE completed", $cmd_num);
+            $self->{logger}->debug(">>>: OK DELETE completed");
+        }
+        else {
+            if ($mode) {
+                if ($self->{imap}->{"bad_command"}) {
+                    if ($self->send_answer_from_config($self->{imap}->{"bad_command"}, $cmd_num)) {
+                        next;
+                    }
+                }
+            }
+            $self->notagged_send("BAD Unrecognised command (non-authenticated state)");
+            $self->{logger}->debug(">>>: $cmd_num BAD Unrecognised command (non-authenticated state)");
+            $self->{selected_folder} = "";
+        }
     }
     ### TODO: надо сбростиь  $self->{connection_number} = 0;
     exit 0;
@@ -444,10 +713,12 @@ sub run_cmd_list() {
     foreach my $folder (keys %folders){
         my $answer = "* XLIST (";
         foreach my $flag (@{$folders{$folder}{"flags"}}) {
-            unless ($answer =~ /\($/) {
-                $answer .= " ";
+            unless ($flag =~ /\d+\-\w+\-\d+\s*+\d+\:\d+:\d+\s+\+?\d*\s*/) {
+                unless ($answer =~ /\($/) {
+                    $answer .= " ";
+                }
+                $answer .= "\\$flag";
             }
-            $answer .= "\\$flag";
         }
         $answer .= ") \"/\" \"$folder\"";
         $self->notagged_send($answer);
@@ -456,6 +727,18 @@ sub run_cmd_list() {
     $self->tagged_send("OK LIST completed", $cmd_num);
     $self->{logger}->debug(">>>: OK LIST completed");
     return 1;
+}
+
+sub check_bad_commands {
+    my $self = shift;
+    my $bad_commands = shift;
+    if ($bad_commands == 3) {
+        $self->notagged_send("BYE Too many invalid IMAP commands");
+        $self->{logger}->debug(">>>: BYE Too many invalid IMAP commands");
+        close $self->{client};
+        return 1;
+    }
+    return -1;
 }
 
 sub run_cmd_status {
@@ -504,8 +787,9 @@ sub run_cmd_status {
         $self->{logger}->debug(">>>: OK STATUS completed");
         return 1;
     }
-    $self->{logger}->info("STATUS command is not well formed");
-    return -1;
+    $self->tagged_send("BAD STATUS error", $cmd_num);
+    $self->{logger}->debug(">>>: BAD STATUS error");
+    return 1;
 }
 
 sub run_cmd_select {
@@ -513,8 +797,8 @@ sub run_cmd_select {
     my ($cmd_num, $select, $is_examine) = @_;
 
     my %folders = %{$self->{test}[$self->{connection_number}]};
+    $self->{selected_folder} = "";
     unless (%folders) {
-        $self->{selected_folder} = "";
         return -1;
     }
 
@@ -527,7 +811,9 @@ sub run_cmd_select {
 
     unless ($select =~ /^\w+\s+(SELECT|EXAMINE)\s+(\S+)\s*$/i) {
         $self->{selected_folder} = "";
-        return -1;
+        $self->tagged_send("BAD SELECT error", $cmd_num);
+        $self->{logger}->debug(">>>: BAD SELECT error");
+        return 1;
     }
     my $folder_with_quotes = $2;
     my $folder = (($folder_with_quotes =~ /^\"(.+)\"$/)? $1: $folder_with_quotes); 
@@ -555,13 +841,131 @@ sub run_cmd_select {
     $self->{logger}->debug(">>>: OK [UIDNEXT $n] Predicted next UID");
 
     if ($is_examine) {
+        $self->{is_read_only} = 1;
         $self->tagged_send("OK [READ-ONLY] EXAMINE completed", $cmd_num);
         $self->{logger}->debug(">>>: OK [READ-ONLY] EXAMINE completed");
     }
     else {
+        $self->{is_read_only} = 0;
         $self->tagged_send("OK [READ-WRITE] SELECT completed", $cmd_num);
         $self->{logger}->debug(">>>: OK [READ-WRITE] SELECT completed");
     }
+    return 1;
+}
+
+sub run_cmd_logout {
+    my $self = shift;
+    my ($cmd_num, $fetch) = @_;
+
+    $self->{selected_folder} = "";
+    $self->notagged_send("BYE Fake Imap Server logging out");
+    $self->tagged_send("OK LOGOUT completed", $cmd_num);
+    close $self->{client};
+    return 1;
+}
+
+sub run_cmd_store {
+    my $self = shift;
+    my ($cmd_num, $store) = @_;
+
+    my %folders = %{$self->{test}[$self->{connection_number}]};
+    my $folder  = $self->{selected_folder};
+    unless (defined $folder) {
+        $self->tagged_send("NO STORE error: no folder selected", $cmd_num);
+        $self->{logger}->debug(">>>: NO STORE error: no folder selected");
+        return 1;
+    }
+    unless (defined $self->{fetch_num}->{$folder}) {
+        $self->{fetch_num}->{$folder} = {counter => 1};
+    }
+    if ($store =~ /^\s*\w+\s+STORE\s+([\d\:\*\,]+)\s+(\+?\-?FLAGS)(\.SILENT)?\s*\(([\w\s\\]*)\)\s*$/i) {
+        unless ($1 or $2) {
+            $self->tagged_send("BAD STORE error: uncorrect arguments", $cmd_num);
+            $self->{logger}->debug(">>>: BAD STORE error: uncorrect arguments");
+            return 1;
+        }
+
+        my $str_uids = $1;
+        my $flag_operation = $2;
+        my $flags = $4;
+        my $silent = ($3? 1: 0);
+        
+        my @uids = ();
+        my $state = -1;
+        if ($str_uids =~ /:/) {
+            @uids = split (':', $str_uids);
+            if ($uids[1] eq '*') {$state = 1;}
+            else {$state = 2;}
+        }
+        elsif ($str_uids =~ /,/) {
+            @uids = split (',', $str_uids);
+            $state = 3;
+        }
+        elsif ($str_uids =~ /^(\d+)$/) {
+            push @uids, $1;
+            $state = 3;
+        }
+        foreach my $test (@{$self->{test}}) {
+            if ($test->{$folder}) {
+                foreach my $uid (keys %{$test->{$folder}->{uids}}) {
+                    my $ok = 0;
+                    switch ($state) {
+                        case 1 {
+                                if ($uid >= $uids[0]) {$ok = 1;}
+                            }
+                        case 2 {
+                                if ($uid >= $uids[0] and $uid <= $uids[1]) {$ok = 1;}
+                            }
+                        case 3 {
+                                if ($uid ~~ \@uids) {$ok = 1;}
+                            }
+                    }
+                    if ($ok) {
+                        my @flags_ar = split(/[\s,\\]+/, $flags);
+                        unless ($flags_ar[0]) {shift @flags_ar;}
+                        #my @flags_ar = ("deleted", "seen", "omnmo", "qqq", "www");
+                        if (lc $flag_operation eq lc "FLAGS") {
+                            @{$test->{$folder}->{uids}->{$uid}} = @flags_ar;
+                        }
+                        elsif (lc $flag_operation eq lc "+FLAGS") {
+                            foreach my $flag (@flags_ar) {
+                                unless (/$flag/i ~~ \@{$test->{$folder}->{uids}->{$uid}}) {
+                                    push @{$test->{$folder}->{uids}->{$uid}}, $flag;
+                                }
+                            }
+                        }
+                        else { #-FLAGS
+                            my @ar = @{$test->{$folder}->{uids}->{$uid}};
+                            my $n = $#ar + 1;
+                            for (my $i = 0; $i < $n; $i++) {
+                                my $flag = $test->{$folder}->{uids}->{$uid}[$i];
+                                if (/$flag/i ~~ \@flags_ar) {
+                                    splice  @{$test->{$folder}->{uids}->{$uid}}, $i, 1;
+                                    $n--;
+                                    $i--;
+                                }
+                            }
+                        }
+                        unless ($self->{fetch_num}->{$folder}->{$uid}) {
+                            $self->{fetch_num}->{$folder}->{$uid} = $self->{fetch_num}->{$folder}->{"counter"};
+                            $self->{fetch_num}->{$folder}->{"counter"}++;
+                        }
+                        my $flag_list_for_fetch = "(";
+                        foreach my $ff (@{$test->{$folder}->{uids}->{$uid}}) {
+                            unless ($ff =~ /\d+\-\w+\-\d+\s*+\d+\:\d+:\d+\s+\+?\d*\s*/) {
+                                $flag_list_for_fetch .= "\\$ff ";
+                            }
+                        }
+                        $flag_list_for_fetch .= ")";
+                        $self->notagged_send($self->{fetch_num}->{$folder}->{$uid}." FETCH FLAGS $flag_list_for_fetch");
+                        $self->{logger}->debug(">>>: ".$self->{fetch_num}->{$folder}->{$uid}." FETCH FLAGS $flag_list_for_fetch");
+                    }
+                }
+            }
+        }
+    }
+    $self->tagged_send("OK STORE completed", $cmd_num);
+    $self->{logger}->debug(">>>: OK STORE completed");
     return 1;
 }
 
@@ -572,8 +976,9 @@ sub run_cmd_fetch {
     my %folders = %{$self->{test}[$self->{connection_number}]};
     my $folder  = $self->{selected_folder};
     unless (defined $folder) {
-        $self->{logger}->info("Folder hasn't not been selected yet or error's appeared during selecting");
-        return -1;
+        $self->tagged_send("NO EXPUNGE error: no folder selected", $cmd_num);
+        $self->{logger}->debug(">>>: NO EXPUNGE error: no folder selected");
+        return 1;
     }
     unless (defined $self->{fetch_num}->{$folder}) {
         $self->{fetch_num}->{$folder} = {counter => 1};
@@ -605,7 +1010,7 @@ sub run_cmd_fetch {
                     print $client "* $fetch_id FETCH (UID $uid BODY[] {$length}\r\n";
                     print $client $fake_message;
                     print $client ")\r\n";
-                    print $client "$cmd_num OK FETCH BODY done\r\n";
+                    print $client "$cmd_num OK FETCH BODY completed\r\n";
                 };
                 if ($@) {
                     $self->{logger}->error("fake message send error");
@@ -630,7 +1035,6 @@ sub run_cmd_fetch {
              if ($right eq "*") {
                 foreach my $uid (sort keys %{$uids}) {
                     unless ($self->{fetch_num}->{$folder}->{$uid}) {
-                        $self->{logger}->debug("new item, $uid");
                         $self->{fetch_num}->{$folder}->{$uid} = $self->{fetch_num}->{$folder}->{"counter"};
                         $self->{fetch_num}->{$folder}->{"counter"}++;
                     }
@@ -645,7 +1049,6 @@ sub run_cmd_fetch {
         else {
             my $uid = $folders{$folder}{"uids"}->{$fuid};
             unless ($self->{fetch_num}->{$folder}->{$fuid}) {
-                $self->{logger}->debug("new item, $uid");
                 $self->{fetch_num}->{$folder}->{$fuid} = $self->{fetch_num}->{$folder}->{"counter"};
                 $self->{fetch_num}->{$folder}->{"counter"}++;
             }
@@ -654,8 +1057,8 @@ sub run_cmd_fetch {
             $self->{logger}->debug(">>>: $answer");
             $self->notagged_send($answer);
         }
-        $self->{logger}->debug(">>>: OK FETCH done");
-        $self->tagged_send("OK FETCH done", $cmd_num);
+        $self->{logger}->debug(">>>: OK FETCH completed");
+        $self->tagged_send("OK FETCH completed", $cmd_num);
         return 1;
     }
     return -1;
@@ -670,7 +1073,6 @@ sub run_fetch_uid {
     my $uid_flags = "";
     
     foreach my $flag (@{$uid}) {
-        $self->{logger}->debug("flag = $flag");
         if ($flag =~ /\d+\-\w+\-\d+\s*+\d+\:\d+:\d+\s+\+?\d*\s*/) {
             $date = $flag;
         }
@@ -706,7 +1108,7 @@ sub send_fake_msg {
         print $client "* 1 FETCH (UID 587 BODY[] {$length}\r\n";
         print $client $fake_message;
         print $client ")\r\n";
-        print $client "$cmd_num OK FETCH BODY done\r\n";
+        print $client "$cmd_num OK FETCH BODY completed\r\n";
     };
     if ($@) {
         $self->{logger}->error("fake message send error");
@@ -715,8 +1117,149 @@ sub send_fake_msg {
     return 1;
 }
 
-sub tagged_send
-{
+sub run_cmd_delete {
+    my $self = shift;
+    my ($cmd_num, $delete) = @_;
+
+    my %folders = %{$self->{test}[$self->{connection_number}]};
+    unless (%folders) {return -1;}
+    
+    #unless ($delete =~ /^\s*\w+\s+DELETE\s+\"?(\w+)\"?\s*$/i) {
+    #    return -1;
+    #}
+
+    my @ar = split('\s', $delete);
+    my $del_folder = $ar[2];
+    if ($ar[2] =~ /^\"(.+)\"$/) {
+        $del_folder = $1;
+    }
+    unless ($folders{$del_folder}) {
+        $self->{logger}->debug(">>>: NO DELETE error");
+        $self->tagged_send("NO DELETE error", $cmd_num);
+    }
+    if ($del_folder =~ /Inbox/i) {
+        $self->{logger}->debug(">>>: NO DELETE error");
+        $self->tagged_send("NO DELETE error", $cmd_num);
+        return 1;
+    }
+    foreach my $flag (@{$folders{$del_folder}{"flags"}}) {
+        if ($flag =~ /Noselect/i) {
+            $self->{logger}->debug(">>>: NO DELETE error");
+            $self->tagged_send("NO DELETE error", $cmd_num);
+            return 1;
+        }
+    }
+    #$del_folder = $1;
+    foreach my $test (@{$self->{test}}) {
+        if ($test->{$del_folder}) {
+            delete($test->{$del_folder});
+        }
+    }
+    $self->{logger}->debug(">>>: OK DELETE completed");
+    $self->tagged_send("OK DELETE completed", $cmd_num);
+    return 1;
+}
+
+sub run_cmd_rename {
+    my $self = shift;
+    my ($cmd_num, $rename) = @_;
+
+    my @ar = split('\s', $rename);
+    my $destiny = $ar[3];
+    my $source = $ar[2];
+    
+    if ($destiny =~ /^\"(.+)\"$/) {
+        $destiny = $1;
+    }
+    if ($source =~ /^\"(.+)\"$/) {
+        $source = $1;
+    }
+    unless ($destiny or $$source) {
+        $self->{logger}->debug(">>>: BAD RENAME error");
+        $self->tagged_send("BAD RENAME error", $cmd_num);
+        return 1;
+    }
+    foreach my $test (@{$self->{test}}) {
+        if ($test->{$source}) {
+            my %hash = %{$test->{$source}};
+            delete($test->{$source});
+            %{$test->{$destiny}} = %hash;
+        }
+    }
+    if ($source =~ /Inbox/i) {
+        foreach my $test (@{$self->{test}}) {
+            %{$test->{"Inbox"}} = ();
+        }
+    }
+    $self->{logger}->debug(">>>: OK RENAME completed");
+    $self->tagged_send("OK RENAME completed", $cmd_num);
+    return 1;
+}
+
+sub run_cmd_expunge {
+    my $self = shift;
+    my ($cmd_num, $expunge) = @_;
+
+    my %folders = %{$self->{test}[$self->{connection_number}]};
+    my $folder  = $self->{selected_folder};
+    unless ($self->{selected_folder}) {
+        $self->tagged_send("NO EXPUNGE error: no folder selected", $cmd_num);
+        $self->{logger}->debug(">>>: NO EXPUNGE error: no folder selected");
+        return 1;
+    }
+    foreach my $uid (keys %{$folders{$self->{selected_folder}}->{uids}}) {
+        $self->{logger}->debug(">>>: $uid EXPUNGE");
+        $self->notagged_send("$uid EXPUNGE");
+        if (/deleted/i ~~ \@{$folders{$self->{selected_folder}}->{uids}->{$uid}}) {
+            delete($folders{$self->{selected_folder}}->{uids}->{$uid});
+        }
+    }
+    $self->{selected_folder} = "";
+    $self->{logger}->debug(">>>: OK EXPUNGE completed");
+    $self->tagged_send("OK EXPUNGE completed", $cmd_num);
+    return 1;
+}
+
+sub run_cmd_close {
+    my $self = shift;
+    my ($cmd_num, $close) = @_;
+
+    my %folders = %{$self->{test}[$self->{connection_number}]};
+    my $folder  = $self->{selected_folder};
+    unless ($self->{selected_folder}) {
+        $self->{logger}->debug(">>>: NO CLOSE error: no folder selected");
+        $self->tagged_send("NO CLOSE error: no folder selected", $cmd_num);
+        return 1;
+    }
+    unless ($self->{is_read_only}) {
+        foreach my $uid (keys %{$folders{$self->{selected_folder}}->{uids}}) {
+            if (/deleted/i ~~ \@{$folders{$self->{selected_folder}}->{uids}->{$uid}}) {
+                delete($folders{$self->{selected_folder}}->{uids}->{$uid});
+            }
+        }
+    }
+    $self->{selected_folder} = "";
+    $self->{logger}->debug(">>>: OK CLOSE completed");
+    $self->tagged_send("OK CLOSE completed", $cmd_num);
+    return 1;
+
+}
+
+sub run_cmd_unselect {
+    my $self = shift;
+    my ($cmd_num, $unselect) = @_;
+    unless ($self->{selected_folder}) {
+        $self->{logger}->debug(">>>: BAD UNSELECT error: no folder selected");
+        $self->tagged_send("BAD UNSELECT error: no folder selected", $cmd_num);
+        return 1;
+    }
+    $self->{selected_folder} = "";
+    $self->{logger}->debug(">>>: OK UNSELECT completed");
+    $self->tagged_send("OK UNSELECT completed", $cmd_num);
+    return 1;
+}
+
+sub tagged_send {
     my $self = shift;
     my $str = $_[0];
     my $num = $_[1];
@@ -728,8 +1271,7 @@ sub tagged_send
     }
 }
 
-sub notagged_send
-{
+sub notagged_send{
     my $self = shift;
     my $str = $_[0];
     my $client = $self->{client};
@@ -1003,7 +1545,6 @@ sub parse_test_file {
         elsif ($k == 5) {
             if ($is_test) {
                 /^(\w+)\,*$/;
-                $self->{logger}->debug("123 ".Dumper(@{$test[-1]->{$folder_name}->{$folder_attribute}}[-1]->{$uid}));
                 push @{@{$test[-1]->{$folder_name}->{$folder_attribute}}[-1]->{$uid}}, $1;
             }
         }
@@ -1035,14 +1576,11 @@ sub parse_test_file1 {
             $fh->close();
             return -1;
         } else {
-            $self->{logger}->debug("OK, parsing completed");
-            
             $self->{test} = \@{$glhash{test}}; #\@test;
             $self->{imap} = \%{$glhash{imap}}; #\%imap;
         }
     };
     if ($@) {
-        $self->{logger}->debug("TRY CATCH ERROR, check your config file, $@\n");
         warn "start server error, check your config file, $@\n";
     }
 
@@ -1074,7 +1612,6 @@ sub do_parse {
         }
         if (/^\{$/) {
             push @{$brackets}, '}'; #type of expected closing bracket
-            $self->{logger}->debug( "brackets: ".Dumper(@{$brackets}));
             if ($is_ar) {
                 my %hash;
                 push @{$it}, \%hash;
@@ -1082,16 +1619,13 @@ sub do_parse {
             }
             else {
                 %{$it->{$prev_line}} = ();
-                $self->{logger}->debug("it {} before: ".Dumper($it));
                 if ($self->do_parse($fh, \%{$it->{$prev_line}}, 0, $brackets) <= 0) {return -1;}
             }
-            $self->{logger}->debug("it {} after: ".Dumper($it));
             $is_first = 1;
             next;
         }
         if (/^\[$/) {
             push @{$brackets}, ']';
-            $self->{logger}->debug("brackets: ".Dumper(@{$brackets}));
             if (!$is_ar and $is_first) {return -1;}
             if ($is_ar) {
                 my @ar;
@@ -1100,17 +1634,15 @@ sub do_parse {
             }
             else {
                 @{$it->{$prev_line}} = ();
-                $self->{logger}->debug("it [] before: ".Dumper($it));
                 if ($self->do_parse($fh, \@{$it->{$prev_line}}, 1, $brackets) <= 0) {return -1;}
             }
-            $self->{logger}->debug("it {} after: ".Dumper($it));
             $is_first = 1;
             next;
         }
         if (/^\]/) {
             my $last = pop @{$brackets};
             unless ($last eq ']') {
-                $self->{logger}->debug("123 Syntax error in config, check ] brackets, ".Dumper(@{$brackets}));
+                $self->{logger}->debug("Syntax error in config, check ] brackets");
                 return -1;
             }
             if (!$is_first) {
@@ -1121,13 +1653,13 @@ sub do_parse {
         if (/^\}/) {
             my $last = pop @{$brackets};
             unless ($last eq '}') {
-                $self->{logger}->debug("456 Syntax error in config, check } brackets, ".Dumper(@{$brackets}));
+                $self->{logger}->debug("Syntax error in config, check } brackets, ");
                 return -1;
             }
             if ($is_first) {
                 return 1;
             } else {
-                $self->{logger}->debug("789 Syntax error in config, check {} or [] brackets, ".Dumper(@{$brackets}));
+                $self->{logger}->debug("Syntax error in config, check {} or [] brackets, ");
                 return -1;
             }
             next;
@@ -1138,13 +1670,11 @@ sub do_parse {
         if ($is_first) {
             $prev_line = $_;
             $is_first = 0;
-            $self->{logger}->debug("LINE is $_");
             if (/^(\w+)[:]?\s*[\(\[]\s*([\s\,\w\(\)]*)[\]\)]\,*\s*$/) {
                 my $key = $1;
                 my $value = $2;
                 my @ar = split (/, */, $value);
                 @{$it->{$key}} = @ar;
-                $self->{logger}->debug("it {} after little push 1: ".Dumper($it));
                 $is_first = 1;
             }
             elsif (/^(\w+)[:]?\s*\{\s*([\s\,\w\(\),\:,\=,\>]*)\}\,?\s*$/) {
@@ -1153,7 +1683,6 @@ sub do_parse {
             }
             elsif (/^(\w+)\s*\:\"?\s*(\w+)\s*\"?\s*\,?$/) {
                 $it->{$1} = $2;
-                $self->{logger}->debug("it {} after little push 2: ".Dumper($it));
                 $is_first = 1;
             }
             elsif (/^\s*\[\s*([\s\,\w\(\)]*)\s*\]\,?\s*$/) {
@@ -1173,7 +1702,7 @@ sub do_parse {
                 push @{$it}, $prev_line;
                 $prev_line = $_;
             } else {
-                $self->{logger}->debug("000 Syntax error in config, check {} or [] brackets, ".Dumper(@{$brackets})); 
+                $self->{logger}->debug("Syntax error in config, check {} or [] brackets, "); 
                 return -1;
             }
         }
@@ -1197,7 +1726,7 @@ sub parse_config
 
     my $do_add = 0;
 
-    while (defined (my $line = <$fh>)) {
+    while (my $line = <$fh>) {
         chomp $line;
         $do_add = 1;
         if ($line =~ /^(\w+)[ ]+([\w\.\/]*)$/) {
