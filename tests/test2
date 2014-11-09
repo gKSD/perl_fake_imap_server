@@ -44,7 +44,7 @@ test
             flags [ "&%^%^&hashnochildren", noselect]
             uidvalidity : 13123
         }
-        test
+        te"qwe/st
         {
             uids
             {
@@ -90,11 +90,12 @@ test
 
 result
 {
-    1
+     
+     1
      {
         qqqq [123]
      }
-    2
+     2
      {
         qqqq [567]
      }

@@ -2,7 +2,7 @@
 
 use strict;
 
-my $test_str = 'aa\bb\\\\ccc\ta"""tt"tt"tt';
+my $test_str = '"aa\bb\\\\ccc\ta"""tt"tt"tt"';
 
 print $test_str . "\n";
 

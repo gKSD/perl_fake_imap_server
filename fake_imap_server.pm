@@ -720,7 +720,7 @@ sub run_cmd_list() {
                 $answer .= "\\$flag";
             }
         }
-        $answer .= ") \"/\" \"$folder\"";
+        $answer .= ") \"/\" ".$self->add_escapes($folder);
         $self->notagged_send($answer);
         $self->{logger}->debug(">>>: $answer");
     }
@@ -752,8 +752,9 @@ sub run_cmd_status {
     if ($status =~ /^\w+\s+STATUS\s+(.+)\s+\((.*)\)\s*$/i) {
         my $need_space = 0;
         my $folder_with_quotes = $1;
+        my $folder1 = $self->remove_escapes($1);
         my $flags = $2." RECENT ";
-        my $folder = (($folder_with_quotes =~ /^\"(.+)\"$/)? $1: $folder_with_quotes);
+        my $folder = (($folder1 =~ /^\"(.+)\"$/)? $1: $folder1);
         my $answer = "STATUS ".$folder_with_quotes." (";
 
         if ($flags =~ /MESSAGES/i) {
@@ -815,7 +816,7 @@ sub run_cmd_select {
         $self->{logger}->debug(">>>: $cmd_num BAD SELECT error");
         return 1;
     }
-    my $folder_with_quotes = $2;
+    my $folder_with_quotes = $self->remove_escapes($2);
     my $folder = (($folder_with_quotes =~ /^\"(.+)\"$/)? $1: $folder_with_quotes); 
    
     $self->{selected_folder} = $folder;
@@ -1125,7 +1126,7 @@ sub run_cmd_delete {
     unless (%folders) {return -1;}
     
     my @ar = split('\s', $delete);
-    my $del_folder = $ar[2];
+    my $del_folder = $self->remove_escapes($ar[2]);
     if ($ar[2] =~ /^\"(.+)\"$/) {
         $del_folder = $1;
     }
@@ -1161,8 +1162,8 @@ sub run_cmd_rename {
     my ($cmd_num, $rename) = @_;
 
     my @ar = split('\s', $rename);
-    my $destiny = $ar[3];
-    my $source = $ar[2];
+    my $destiny = $self->remove_escapes($ar[3]);
+    my $source = $self->remove_escapes($ar[2]);
     
     if ($destiny =~ /^\"(.+)\"$/) {
         $destiny = $1;
@@ -1253,6 +1254,23 @@ sub run_cmd_unselect {
     $self->{logger}->debug(">>>: $cmd_num OK UNSELECT completed");
     $self->tagged_send("OK UNSELECT completed", $cmd_num);
     return 1;
+}
+
+sub add_escapes {
+    my $self = shift;
+    my $line = shift;
+    $line =~ /^\"?(.*)\"?$/;
+    my $str = $1;
+    $str =~ s/\\/\\\\/ig;
+    $str =~ s/\"/\\\"/ig;
+    return '"'. $str . '"';
+}
+sub remove_escapes {
+    my $self = shift;
+    my $line = shift;
+    $line =~ s/\\\\/\\/ig;
+    $line =~ s/\\\"/\"/ig;
+    return $line;
 }
 
 sub tagged_send {
@@ -1807,39 +1825,8 @@ sub parse_config
         chomp $line;
         $do_add = 1;
         if ($line =~ /^(\w+)[ ]+([\w\.\/]*)$/) {
-            my $key = $1;
+            my $key = lc $1;
             my $value = $2;
-
-            ### Параметры, передаваемые напрямую - более приоритетные
-=begin
-            switch ($key) {
-                case 'host' {
-                        if (defined $self->{init_params}->{host}) {
-                            $do_add = 0;
-                        }
-                    }
-                case 'port' {
-                        if (defined $self->{init_params}->{port}) {
-                            $do_add = 0;
-                        }
-                    }
-                case 'listen' {
-                        if (defined $self->{init_params}->{listen}) {
-                            $do_add = 0;
-                        }
-                    }
-                case 'test' {
-                        if (defined $self->{init_params}->{test}) {
-                            $do_add = 0;
-                        }
-                    }
-            }
-
-            if ($do_add)
-            {
-                $self->{init_params}{$key} = $value;
-            }
-=cut
             $self->{init_params}{$key} = $value;
         }
     }

@@ -154,6 +154,242 @@ sub parse_test_file {
     print "test_counter: $test_counter\n";
 }
 
+sub do_parse {
+    my $fh = shift; #указатель на файл
+    my $it = shift; # ссылка на предыдущую структуру
+    my $is_ar = shift; # тип предыдущей структуры - хэш или массив
+    my $brackets = shift; #ссылка на массив со скобками
+
+    my $prev_line;
+    my $is_first = 1;
+
+    while (<$fh>) {
+        chomp $_;
+        s/\s*//;
+
+        if (/^\{\}$/) {
+            next;
+        }
+        if (/^\[\]$/) {
+            next;
+        }
+        if (/^\{$/) {
+            push @{$brackets}, '}'; #type of expected closing bracket
+            if ($is_ar) {
+                if (!$is_first) {
+                    if ($prev_line =~ /^\s*\[\s*([^\f\n\r\t\v]*)\s*\]\,?\s*$/) {
+                        my $value = $1;
+                        my @ar = split (/, */, $value);
+                        my $n = $#ar + 1;
+                        for (my $i = 0; $i < $n; $i++) {
+                            if ($ar[$i] =~ /^\"(.*)\"$/) {$ar[$i] = $1;}
+                        }
+                        push @{$it}, \@ar;
+                        $is_first = 1;
+                    }
+                    elsif ($prev_line =~ /^\"(.*)\"$/) {
+                        push @{$it}, $1;
+                    }
+                    else{
+                        $prev_line =~ s/\s+$//g;
+                        if ($prev_line =~ /[\:\,\;\-\=]$/) { chop $prev_line;}
+                        push @{$it}, $prev_line;
+                    }
+                } 
+                my %hash;
+                push @{$it}, \%hash;
+                if (do_parse($fh, \%{$it->[-1]}, 0, $brackets) <= 0) {return -1;}
+            }
+            else {
+                %{$it->{$prev_line}} = ();
+                if (do_parse($fh, \%{$it->{$prev_line}}, 0, $brackets) <= 0) {return -1;}
+            }
+            $is_first = 1;
+            next;
+        }
+        if (/^\[$/) {
+            push @{$brackets}, ']';
+            if (!$is_ar and $is_first) {return -1;}
+            if ($is_ar) {
+                if (!$is_first) {
+                    if ($prev_line =~ /^\s*\[\s*([^\f\n\r\t\v]*)\s*\]\,?\s*$/) {
+                        my $value = $1;
+                        my @ar = split (/, */, $value);
+                        my $n = $#ar + 1;
+                        for (my $i = 0; $i < $n; $i++) {
+                            if ($ar[$i] =~ /^\"(.*)\"$/) {$ar[$i] = $1;}
+                        }
+                        push @{$it}, \@ar;
+                        $is_first = 1;
+                    }
+                    elsif ($prev_line =~ /^\"(.*)\"$/) {
+                        push @{$it}, $1;
+                    }
+                    else{
+                        $prev_line =~ s/\s+$//g;
+                        if ($prev_line =~ /[\:\,\;\-\=]$/) { chop $prev_line;}
+                        push @{$it}, $prev_line;
+                    }
+                }
+                my @ar;
+                push @{$it}, \@ar;
+                if (do_parse($fh, \@{$it->[-1]}, 1, $brackets) <= 0) {return -1;}
+            }
+            else {
+                @{$it->{$prev_line}} = ();
+                if (do_parse($fh, \@{$it->{$prev_line}}, 1, $brackets) <= 0) {return -1;}
+            }
+            $is_first = 1;
+            next;
+        }
+        if (/^\]/) {
+            my $last = pop @{$brackets};
+            unless ($last eq ']') {
+                warn "Syntax error in config, check ] brackets\n";
+                return -1;
+            }
+            if (!$is_first) {
+                if ($prev_line =~ /^\s*\[\s*([^\f\n\r\t\v]*)\s*\]\,?\s*$/) {
+                    my $value = $1;
+                    my @ar = split (/, */, $value);
+                    my $n = $#ar + 1;
+                    for (my $i = 0; $i < $n; $i++) {
+                        if ($ar[$i] =~ /^\"(.*)\"$/) {$ar[$i] = $1;}
+                    }
+                    push @{$it}, \@ar;
+                    $is_first = 1;
+                }
+                elsif ($prev_line =~ /^\"(.*)\"$/) {
+                    push @{$it}, $1;
+                }
+                else {
+                    $prev_line =~ s/\s+$//g;
+                    if ($prev_line =~ /[\:\,\;\-\=]$/) { chop $prev_line;}
+                    push @{$it}, $prev_line;
+                }
+            }
+            return 1;
+        }
+        if (/^\}/) {
+            my $last = pop @{$brackets};
+            unless ($last eq '}') {
+                warn "Syntax error in config, check } brackets\n";
+                return -1;
+            }
+            if ($is_first) {
+                return 1;
+            } else {
+                warn "Syntax error in config, check {} or [] brackets\n";
+                return -1;
+            }
+            next;
+        }
+
+        if (/^$/) {next;}
+        if (/^\#/) {next;}
+        if ($is_first) {
+            $prev_line = $_;
+            $is_first = 0;
+            if (/^(\w+)[:]?\s*[\(\[]\s*([^\f\n\r\t\v]*)[\]\)]\,*\s*$/) {
+                my $key = $1;
+                my $value = $2;
+                my @ar = split (/, */, $value);
+                my $n = $#ar + 1;
+                for (my $i = 0; $i < $n; $i++) {
+                    if ($ar[$i] =~ /^\"(.*)\"$/) {$ar[$i] = $1;}
+                }
+                @{$it->{$key}} = @ar;
+                $is_first = 1;
+            }
+            elsif (/^(\w+)[:]?\s*\{\s*([\s\,\w\(\),\:,\=,\>]*)\}\,?\s*$/) {
+                print "unsupported type of hash, check your config\n";
+                return -1;
+            }
+            elsif (/^(\w+)\s*\:\"?\s*(\S+)\s*\"?\s*\,?$/) {
+                $it->{$1} = $2;
+                $is_first = 1;
+            }
+            elsif (/^\s*\[\s*([^\f\n\r\t\v]*)\s*\]\,?\s*$/) {
+                my $value = $1;
+                my @ar = split (/, */, $value);
+                my $n = $#ar + 1;
+                for (my $i = 0; $i < $n; $i++) {
+                    if ($ar[$i] =~ /^\"(.*)\"$/) {$ar[$i] = $1;}
+                }
+                push @{$it}, \@ar;
+                $is_first = 1;
+            }
+            elsif  (!$is_ar and /^\s*\[/) {
+                return -1;
+            }
+            elsif (/(.+):\s*$/) {
+                $prev_line = $1;
+            }
+        } else {
+            if ($is_ar) {
+                if ($prev_line =~ /^\s*\[\s*([^\f\n\r\t\v]*)\s*\]\,?\s*$/) {
+                    my $value = $1;
+                    my @ar = split (/, */, $value);
+                    my $n = $#ar + 1;
+                    for (my $i = 0; $i < $n; $i++) {
+                        if ($ar[$i] =~ /^\"(.*)\"$/) {$ar[$i] = $1;}
+                    }
+                    push @{$it}, \@ar;
+                    $is_first = 1;
+                }
+                elsif ($prev_line =~ /^\"(.*)\"$/) {
+                    push @{$it}, $1;
+                }
+                else {
+                    $prev_line =~ s/\s+$//g;
+                    if ($prev_line =~ /[\:\,\;\-\=]$/) { chop $prev_line;}
+                    push @{$it}, $prev_line;
+                }
+                $prev_line = $_;
+            } else {
+                warn "Syntax error in config, check {} or [] brackets\n"; 
+                return -1;
+            }
+        }
+    }
+    return 1;
+}
+sub parse_test_file1 {
+    my $test_file = shift;
+    my $result = shift;
+    my $test_counter = shift;
+ 
+
+    my $fh = new IO::File;
+    unless ($fh->open("$test_file")) {
+        die "file($test_file) with imap tests not found\n";
+    }
+
+    my @brackets;
+    my %glhash;
+
+    eval {
+        if (do_parse($fh, \%glhash, 0, \@brackets) <= 0) {
+            warn "ERROR in parsing\n";
+            $fh->close();
+            return -1;
+        } else {
+            my @ar = @{$glhash{test}};
+            $test_counter = $#ar;
+            $result = \%{$glhash{result}};
+            warn "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! ".Dumper($glhash{result})."\n";
+        }
+    };
+    if ($@) {
+        warn "start server error, check your config file, $@\n";
+    }
+
+    $fh->close();
+}
+
+
+
+
 sub check_collector_params {
     my $db = shift;
     my $params = shift;
@@ -348,6 +584,7 @@ sub my_exit {
 }
 
 my @test_result;
+my %test_result1 = ();
 my $tests_amount = 0;
 my $check_all = 0; #flag
 my $link_to_tests_amount = \$tests_amount;
@@ -366,7 +603,8 @@ my $collector_id = create_collector($db, $parsed_args{"UserID"}, $parsed_args{"U
 select_from_db_table_by_UserEmail($db, 'ksd001@mail.ru');
 
 if (defined $parsed_args{"test"}) {
-    parse_test_file($parsed_args{"test"},\@test_result, $link_to_tests_amount);
+    parse_test_file1($parsed_args{"test"},\%test_result1, $link_to_tests_amount);
+    warn "config ".Dumper(\%test_result1).", \$tests_amount  = $tests_amount \n";
     my $cmd = "./fake_imap_server.pm run  ".(defined $parsed_args{"imap_config"}? 
                     "--config=".$parsed_args{"imap_config"}: '--config=config.conf').
                     "  --test=".$parsed_args{"test"};
@@ -378,8 +616,8 @@ else {
     #parse_test_file($test_file,\@test_result, $link_to_tests_amount);
 }
 
-$check_all = ($#test_result + 1 <= 1? 0: 1);
-print "Res \@test_result = @test_result,  \$tests_amount = $tests_amount\n";
+#$check_all = ($#test_result + 1 <= 1? 0: 1);
+print "Res \%test_result1 = ".Dumper(\%test_result1).",  \$tests_amount = $tests_amount\n";
 
 
 #for (my $i = 0; $i < $tests_amount; $i++) {
