@@ -77,81 +77,31 @@ unless ($parsed_args{"test"}) {
     exit;
 }
 
+sub parse_imap_config {
+    my $config_file = shift;
+    my $result = shift;
 
-sub parse_test_file {
-    my $test_file = shift;
-
+    #open FILE, $config_file or return;
     my $fh = new IO::File;
-    unless ($fh->open("< $test_file")) {
-        warn "file($test_file) with reference state of mailbox not found\n";
+    unless ($fh->open("< $config_file"))
+    {
+        warn "config_file ($config_file) not found\n";
         return;
     }
 
-    my $k = 0;
-    my @result = shift;
-    my $is_result = 0;
-    my $test_counter = shift;
-    my $is_test = 0;
-    my $key;
+    my $do_add = 0;
 
-    $$test_counter = 0;
-    while(<$fh>) {
-        chomp $_; 
-        s/\s*//;
-        if (/^\{\}$/) {
-            next;
-        }
-        if (/\{/) {
-            $k++;
-            next;
-        }
-        elsif (/\}/) {
-            $k--;
-            if ($k == 0) {
-                $is_result = 0;
-                $is_test = 0;
-            }
-            next;
-        }
-        elsif (/^$/) {
-            next;
-        }
-
-        if ($k == 0) {
-            $key = lc $_;
-            if ($key eq "result") {
-                $is_result = 1;
-            }
-            elsif ($key eq "test") {
-                $is_test = 1;
-            }
-        }
-        elsif ($k == 1) {
-            if ($is_result) {
-                my @ar = [];
-                push @test, @ar;
-            }
-            elsif ($is_test) {
-                $$test_counter++;
-            }
-        }
-        elsif ($k == 2) {
-            if ($is_result) {
-                if (/^(\w+):[ ]+\[([\s\,\w]+)\]$/) {
-                    my $key1 = $1;
-                    my $value = $2;
-                    my %hash = ();
-                    my @ar = split (/, */, $value);
-
-                    @{$hash{$key1}} = @ar;
-                    push @{$result[-1]}, \%hash;
-                }
-            }
+    while (my $line = <$fh>) {
+        chomp $line;
+        $do_add = 1;
+        if ($line =~ /^(\w+)[ ]+([\w\.\/]*)$/) {
+            my $key = lc $1;
+            my $value = $2;
+            $result->{$key} = $value;
         }
     }
-
-    $fh->close();
-    print "test_counter: $test_counter\n";
+    #close FILE;
+    $fh->close;
 }
 
 sub do_parse {
@@ -375,9 +325,8 @@ sub parse_test_file1 {
             return -1;
         } else {
             my @ar = @{$glhash{test}};
-            $test_counter = $#ar;
-            $result = \%{$glhash{result}};
-            warn "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! ".Dumper($glhash{result})."\n";
+            $$test_counter = $#ar + 1;
+            %{$result} = %{$glhash{result}};
         }
     };
     if ($@) {
@@ -570,24 +519,27 @@ sub select_from_db_table_by_ID{
 }
 
 sub my_exit {
-    my $db = shift;
-    my $collector_id = shift;
+    my ($db, $collector_id, $imap_config) = @_;
     delete_collector($db, $collector_id);
 
-    my $fh = IO::File->new("< /tmp/server.pid");
+    my $pid_file = ($imap_config->{pid_file} ? $imap_config->{pid_file}: "/tmp/server.pid");
+    warn "pid_file = $pid_file\n";
+
+    my $fh = IO::File->new("< $pid_file");
     if (defined $fh) {
         my $line = <$fh>;
         chomp $line;
-        print "PID = $line\n";
+        print "kill PID: $line\n";
         kill 9, $line;
     }
+    $fh->close();
 }
 
-my @test_result;
-my %test_result1 = ();
+my %test_result1;
 my $tests_amount = 0;
 my $check_all = 0; #flag
 my $link_to_tests_amount = \$tests_amount;
+my %imap_config = ();
 my $db = run_connect($parsed_args{'mysql_host'}, 'mysql', $parsed_args{'mysql_user'}, $parsed_args{'mysql_password'});
 
 check_collector_params($db,\%parsed_args);
@@ -603,8 +555,10 @@ my $collector_id = create_collector($db, $parsed_args{"UserID"}, $parsed_args{"U
 select_from_db_table_by_UserEmail($db, 'ksd001@mail.ru');
 
 if (defined $parsed_args{"test"}) {
-    parse_test_file1($parsed_args{"test"},\%test_result1, $link_to_tests_amount);
-    warn "config ".Dumper(\%test_result1).", \$tests_amount  = $tests_amount \n";
+    parse_test_file1($parsed_args{"test"}, \%test_result1, $link_to_tests_amount);
+    parse_imap_config(($parsed_args{"imap_config"}? $parsed_args{"imap_config"}: 'config.conf'),
+                        \%imap_config);
+    warn "config ".Dumper(%test_result1).", \$tests_amount  = $tests_amount, 3) !!! ".Dumper(\%imap_config)."\n";
     my $cmd = "./fake_imap_server.pm run  ".(defined $parsed_args{"imap_config"}? 
                     "--config=".$parsed_args{"imap_config"}: '--config=config.conf').
                     "  --test=".$parsed_args{"test"};
@@ -613,21 +567,16 @@ if (defined $parsed_args{"test"}) {
 else {
     my_exit($db, $collector_id);
     die "file with test is undefined\n";
-    #parse_test_file($test_file,\@test_result, $link_to_tests_amount);
 }
 
-#$check_all = ($#test_result + 1 <= 1? 0: 1);
 print "Res \%test_result1 = ".Dumper(\%test_result1).",  \$tests_amount = $tests_amount\n";
 
 
-#for (my $i = 0; $i < $tests_amount; $i++) {
-    #my $cmd = "~/mpop/src/rimap/BUILD/sheduler --proto=imap --id=$collector_id &";
-    #system($cmd);
-
+for (my $i = 0; $i < $tests_amount; $i++) {
     $cmd = "~/mpop/src/rimap/BUILD/collector --proto=imap --fetch-id=$collector_id --log=imap -l 5";
     system($cmd);
-#}
+}
 
-my_exit($db, $collector_id);
+my_exit($db, $collector_id, \%imap_config);
 
 1;

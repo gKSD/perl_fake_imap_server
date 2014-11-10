@@ -126,8 +126,14 @@ sub init
     $self->{logger} = get_logger();
 
     if (defined $self->{init_params}->{test}) {
-        @{$self->{test}} = [];
+        @{$self->{test}} = ();
+        %{$self->{imap}} = ();
         $self->parse_test_file1($self->{init_params}->{test});
+    }
+
+    unless ($self->check_test_file_structure()) {
+        warn "Test file not well formed, server started with default params\n";
+        $self->{init_params}->{"mode"} = "";
     }
 
     if (defined $self->{init_params}->{pid_file} ) {
@@ -1398,6 +1404,50 @@ sub get_tests_amount {
     return ($#{$self->{test}} + 1);
 }
 
+sub check_test_file_structure {
+    my $self = shift;
+    if ( !$self->{imap} and !$self->{test}) {
+        return -1;
+    }
+    unless (ref($self->{imap}) eq "HASH") {
+        $self->{logger}->warn("imap part in test file is not a hash");
+        delete $self->{imap}
+    }
+    else {
+        foreach my $key (keys %{$self->{imap}}) {
+            if (ref($self->{imap}->{$key}) eq "HASH") {
+                $self->{logger}->warn("imap part in test file is not a hash");
+                delete $self->{imap}->{$key};
+            }
+        }
+    }
+    unless (ref($self->{test}) eq "ARRAY") {
+        $self->{logger}->warn("test part in test file is not a array");
+        delete $self->{test}
+    }
+    else {
+        foreach my $key (@{$self->{test}}) {
+            warn "ref of test keys ".ref($key)."\n";
+            unless (ref($key) eq "HASH") {
+                $self->{logger}->warn("each item in test array must be a hash");
+                return -1;
+            }
+            foreach my $key1 (keys %{$key}) {
+                warn "ref of test keys1 ".ref($key->{$key1})."   ".Dumper($key->{$key1}->{uids})."\n";
+                unless (ref($key->{$key}) eq "HASH") {
+                    $self->{logger}->warn("each test in test array must be a hash");
+                    return -1;
+                }
+                unless (ref($key->{$key}->{uids}) eq "HASH") {
+                    $self->{logger}->warn("uids in test part must be hashes");
+                    return -1;
+                }
+            }
+        }
+    }
+    return 1;
+}
+
 sub parse_test_file {
     my $self = shift;
     my $test_file = shift;
@@ -1590,8 +1640,12 @@ sub parse_test_file1 {
             $fh->close();
             return -1;
         } else {
-            $self->{test} = \@{$glhash{test}};
-            $self->{imap} = \%{$glhash{imap}};
+            if (ref($glhash{test}) eq "ARRAY") {
+                $self->{test} = \@{$glhash{test}};
+            }
+            if (ref($glhash{imap}) eq "HASH") {
+                $self->{imap} = \%{$glhash{imap}};
+            }
         }
     };
     if ($@) {

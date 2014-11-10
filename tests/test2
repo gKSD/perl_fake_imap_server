@@ -44,7 +44,7 @@ test
             flags [ "&%^%^&hashnochildren", noselect]
             uidvalidity : 13123
         }
-        te"qwe/st
+        test
         {
             uids
             {
@@ -80,10 +80,14 @@ test
                     09-Jul-2014 09:21:57 +0000
                 ],
             }
+            uidvalidity : 13123
         }
         test
         {
-            uids: [10]
+            uids:
+            {
+                10 []
+            }
         }
      }
 ]
