@@ -1,10 +1,14 @@
-#!/usr/bin/perl -I/home/sofia/mailru/perl_fake_imap_server
+#!/usr/bin/perl -I/usr/local/mpop/lib/
 
 use IO::File;
 use Switch;
 use Data::Dumper;
 use DBI;
 use Time::HiRes qw(gettimeofday);
+
+use Mailbox;
+use mPOP;
+use PMescalito();
 
 sub print_help {
     print "Usage:\n";
@@ -80,8 +84,6 @@ unless ($parsed_args{"test"}) {
 sub parse_imap_config {
     my $config_file = shift;
     my $result = shift;
-
-    #open FILE, $config_file or return;
     my $fh = new IO::File;
     unless ($fh->open("< $config_file"))
     {
@@ -90,7 +92,6 @@ sub parse_imap_config {
     }
 
     my $do_add = 0;
-
     while (my $line = <$fh>) {
         chomp $line;
         $do_add = 1;
@@ -100,7 +101,6 @@ sub parse_imap_config {
             $result->{$key} = $value;
         }
     }
-    #close FILE;
     $fh->close;
 }
 
@@ -499,8 +499,6 @@ sub select_from_db_table_by_UserEmail{
     #}
 
     my $result = $sth->fetchrow_hashref();
-    print "Value returned: ".Dumper($result->{ID})."\n";
-
     $sth->finish();
 }
 
@@ -513,8 +511,6 @@ sub select_from_db_table_by_ID{
     $sth->execute($ID);
 
     my $result = $sth->fetchrow_hashref();
-    print "Value returned: ".Dumper($result->{ID})."\n";
-
     $sth->finish();
 }
 
@@ -558,7 +554,6 @@ if (defined $parsed_args{"test"}) {
     parse_test_file1($parsed_args{"test"}, \%test_result1, $link_to_tests_amount);
     parse_imap_config(($parsed_args{"imap_config"}? $parsed_args{"imap_config"}: 'config.conf'),
                         \%imap_config);
-    warn "config ".Dumper(%test_result1).", \$tests_amount  = $tests_amount, 3) !!! ".Dumper(\%imap_config)."\n";
     my $cmd = "./fake_imap_server.pm run  ".(defined $parsed_args{"imap_config"}? 
                     "--config=".$parsed_args{"imap_config"}: '--config=config.conf').
                     "  --test=".$parsed_args{"test"};
@@ -569,11 +564,8 @@ else {
     die "file with test is undefined\n";
 }
 
-print "Res \%test_result1 = ".Dumper(\%test_result1).",  \$tests_amount = $tests_amount\n";
-
-
 for (my $i = 0; $i < $tests_amount; $i++) {
-    $cmd = "~/mpop/src/rimap/BUILD/collector --proto=imap --fetch-id=$collector_id --log=imap -l 5";
+    $cmd = "../BUILD/collector --proto=imap --fetch-id=$collector_id --log=imap -l 5";
     system($cmd);
 }
 

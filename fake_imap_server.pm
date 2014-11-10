@@ -144,8 +144,6 @@ sub init
             $fh->close;
         }
     }
-
-    $self->{logger}->debug("After all parse: ".Dumper($self));
 }
 
 sub run {
@@ -707,7 +705,6 @@ sub process_request {
             $self->{selected_folder} = "";
         }
     }
-    ### TODO: надо сбростиь  $self->{connection_number} = 0;
     exit 0;
 }
 
@@ -1152,7 +1149,6 @@ sub run_cmd_delete {
             return 1;
         }
     }
-    #$del_folder = $1;
     foreach my $test (@{$self->{test}}) {
         if ($test->{$del_folder}) {
             delete($test->{$del_folder});
@@ -1427,13 +1423,11 @@ sub check_test_file_structure {
     }
     else {
         foreach my $key (@{$self->{test}}) {
-            warn "ref of test keys ".ref($key)."\n";
             unless (ref($key) eq "HASH") {
                 $self->{logger}->warn("each item in test array must be a hash");
                 return -1;
             }
             foreach my $key1 (keys %{$key}) {
-                warn "ref of test keys1 ".ref($key->{$key1})."   ".Dumper($key->{$key1}->{uids})."\n";
                 unless (ref($key->{$key}) eq "HASH") {
                     $self->{logger}->warn("each test in test array must be a hash");
                     return -1;
@@ -1662,8 +1656,6 @@ sub do_parse {
     my $is_ar = shift; # тип предыдущей структуры - хэш или массив
     my $brackets = shift; #ссылка на массив со скобками
 
-    $self->{logger}->debug("FUNCTION do_parse,".Dumper($it));
-
     my $prev_line;
     my $is_first = 1;
 
@@ -1864,8 +1856,6 @@ sub parse_config
 {
     my $self = shift;
     my $config_file = shift;
-
-    #open FILE, $config_file or return;
     my $fh = new IO::File;
     unless ($fh->open("< $config_file"))
     {
@@ -1874,7 +1864,6 @@ sub parse_config
     }
 
     my $do_add = 0;
-
     while (my $line = <$fh>) {
         chomp $line;
         $do_add = 1;
@@ -1884,7 +1873,6 @@ sub parse_config
             $self->{init_params}{$key} = $value;
         }
     }
-    #close FILE;
     $fh->close;
 
 }
