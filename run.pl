@@ -8,7 +8,9 @@ use Time::HiRes qw(gettimeofday);
 
 use Mailbox;
 use mPOP;
+use mPOP::Domain (preload=>1);
 use PMescalito();
+use mPOP::MescFolders();
 
 sub print_help {
     print "Usage:\n";
@@ -94,9 +96,11 @@ sub parse_imap_config {
     my $do_add = 0;
     while (my $line = <$fh>) {
         chomp $line;
+        warn "line = $line\n";
         $do_add = 1;
-        if ($line =~ /^(\w+)[ ]+([\w\.\/]*)$/) {
-            my $key = lc $1;
+        if ($line =~ /^\s*(\w+)\s+\"?([\w\.\/\@]*)\"?\s*$/) {
+            #my $key = lc $1;
+            my $key = $1;
             my $value = $2;
             $result->{$key} = $value;
         }
@@ -304,7 +308,7 @@ sub do_parse {
     }
     return 1;
 }
-sub parse_test_file1 {
+sub parse_test_file {
     my $test_file = shift;
     my $result = shift;
     my $test_counter = shift;
@@ -335,8 +339,6 @@ sub parse_test_file1 {
 
     $fh->close();
 }
-
-
 
 
 sub check_collector_params {
@@ -515,10 +517,10 @@ sub select_from_db_table_by_ID{
 }
 
 sub my_exit {
-    my ($db, $collector_id, $imap_config) = @_;
+    my ($db, $collector_id, $config) = @_;
     delete_collector($db, $collector_id);
 
-    my $pid_file = ($imap_config->{pid_file} ? $imap_config->{pid_file}: "/tmp/server.pid");
+    my $pid_file = ($config->{pid_file} ? $config->{pid_file}: "/tmp/server.pid");
     warn "pid_file = $pid_file\n";
 
     my $fh = IO::File->new("< $pid_file");
@@ -535,9 +537,11 @@ my %test_result1;
 my $tests_amount = 0;
 my $check_all = 0; #flag
 my $link_to_tests_amount = \$tests_amount;
-my %imap_config = ();
 my $db = run_connect($parsed_args{'mysql_host'}, 'mysql', $parsed_args{'mysql_user'}, $parsed_args{'mysql_password'});
-
+warn "Dumper1 => ".Dumper(\%parsed_args)."\n";
+parse_imap_config(($parsed_args{"imap_config"}? $parsed_args{"imap_config"}: 'config.conf'),\%parsed_args);
+warn "Dumper => ".Dumper(\%parsed_args)."\n";
+ 
 check_collector_params($db,\%parsed_args);
 
 my $collector_id = create_collector($db, $parsed_args{"UserID"}, $parsed_args{"UserEmail"},
@@ -551,9 +555,7 @@ my $collector_id = create_collector($db, $parsed_args{"UserID"}, $parsed_args{"U
 select_from_db_table_by_UserEmail($db, 'ksd001@mail.ru');
 
 if (defined $parsed_args{"test"}) {
-    parse_test_file1($parsed_args{"test"}, \%test_result1, $link_to_tests_amount);
-    parse_imap_config(($parsed_args{"imap_config"}? $parsed_args{"imap_config"}: 'config.conf'),
-                        \%imap_config);
+    parse_test_file($parsed_args{"test"}, \%test_result1, $link_to_tests_amount);
     my $cmd = "./fake_imap_server.pm run  ".(defined $parsed_args{"imap_config"}? 
                     "--config=".$parsed_args{"imap_config"}: '--config=config.conf').
                     "  --test=".$parsed_args{"test"};
@@ -569,6 +571,27 @@ for (my $i = 0; $i < $tests_amount; $i++) {
     system($cmd);
 }
 
+
+eval {
+    my $pUser = mPOP::Get()->GetUserFromID($parsed_args{"UserID"});
+    my $mesc = $pUser->GetPMescalito;
+    #warn "dumper: ".Dumper($pUser)."\n";
+    my $ret = $mesc->GetFolders;
+    my $msgs = $mesc->GetFolderMessages(0);
+    warn Dumper(\@{$msgs});
+    
+    
+    
+    
+    #my $pMescFolders = mPOP::MescFolders->new( $pUser->GetPMescalito );
+    #warn "dumepr: ".Dumper($pMescFolders)."\n";
+    #my $sorted_folders = $pMescFolders->GetSortedFolders;
+    #warn "dumepr: ".Dumper($sorted_folders)."\n";
+
+};
+if ($@) {
+    warn "mauu\n";
+}
 my_exit($db, $collector_id, \%imap_config);
 
 1;

@@ -30,16 +30,12 @@ test
                 ],
                 3
                 [
-                recent
-                seen
-                09-Jul-2014 09:21:57 +0000
-                deleted
-                ],
-                5
-                [
-                    RECENT
+                    recent
+                    seen
                     09-Jul-2014 09:21:57 +0000
-                ]
+                    deleted
+                ],
+                5 [ 09-Jul-2014 09:21:57 +0000 ]
             }
             flags [ "&%^%^&hashnochildren", noselect]
             uidvalidity : 13123
@@ -50,19 +46,13 @@ test
             {
                 10
                 [
-                recent
-                09-Jul-2014 09:21:57 +0000
-                ["*&(^*%&*^%&^", qqqqqq]
+                    recent
+                    09-Jul-2014 09:21:57 +0000
                 ],
                 11
                 [
-                recent
-                [
-                    sssss
-                    xxxxx
-                    vvvvv
-                ]
-                09-Jul-2014 09:21:57 +0000
+                    recent
+                    09-Jul-2014 09:21:57 +0000
                 ],
             }
         }
@@ -72,8 +62,8 @@ test
         {
             uids
             {
-                2 [seen,answered],
-                5
+                1 [seen,answered, "09-Jul-2014 09:21:57 +0000"],
+                3
                 [
                     seen
                     answered
@@ -86,7 +76,7 @@ test
         {
             uids:
             {
-                10 []
+                10 ["23-Aug-2013 00:00:33 +0000"]
             }
         }
      }

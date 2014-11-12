@@ -99,6 +99,7 @@ sub new {
     $self->{fetch_num} = {};
     $self->{is_read_only} = 0;
     $self->{state} = 0;
+    $self->{test_amount} = 0;
     #States: 0 - non-authenticated, 1 - authenticated, 2 - selected, 3 - logout
 
     bless $self, $class;
@@ -144,6 +145,7 @@ sub init
             $fh->close;
         }
     }
+    warn "fake imap dumper: ".Dumper($self)."\n";
 }
 
 sub run {
@@ -169,6 +171,9 @@ sub run {
         $SIG{CHLD} = 'IGNORE';
         my $pid;
         $self->{connection_number}++;
+        if ($self->{connection_number} >= $self->{test_amount}) {
+            close $self->{client};
+        }
         while (not defined ($pid = fork()))
         {
             sleep 5;
@@ -1036,19 +1041,29 @@ sub run_cmd_fetch {
         if ($2) {
              my $right = $2; 
              my $uids = $folders{$folder}{"uids"};
-             if ($right eq "*") {
-                foreach my $uid (sort keys %{$uids}) {
+             my $ok;
+             foreach my $uid (sort keys %{$uids}) {
+                $ok = 0;
+                if ($right eq "*") {
+                    if ($uid >= $fuid) {
+                        $self->{logger}->debug("123 fuid = $fuid, right = *, uid = $uid, is_ok");
+                        $ok = 1;
+                    }
+                }
+                elsif ($uid >= $fuid and $uid <= $right) {
+                    $self->{logger}->debug("456 fuid = $fuid, right = $right, uid = $uid, is_ok");
+                    $ok = 1;
+                }
+                if ($ok) {
                     unless ($self->{fetch_num}->{$folder}->{$uid}) {
                         $self->{fetch_num}->{$folder}->{$uid} = $self->{fetch_num}->{$folder}->{"counter"};
                         $self->{fetch_num}->{$folder}->{"counter"}++;
                     }
                     $answer = $self->run_fetch_uid($uid, $fflags, $uids->{$uid});
-                    if ($uid >= $fuid) {
-                        $self->{logger}->debug(">>>: $answer");
-                        $self->notagged_send($answer);
-                    }
+                    $self->{logger}->debug(">>>: $answer");
+                    $self->notagged_send($answer);
                 }
-             }
+            }
         }
         else {
             my $uid = $folders{$folder}{"uids"}->{$fuid};
@@ -1636,6 +1651,8 @@ sub parse_test_file1 {
         } else {
             if (ref($glhash{test}) eq "ARRAY") {
                 $self->{test} = \@{$glhash{test}};
+                my @ar = @{$glhash{test}};
+                $self->{test_amount} = $#ar + 1;
             }
             if (ref($glhash{imap}) eq "HASH") {
                 $self->{imap} = \%{$glhash{imap}};
@@ -1867,7 +1884,7 @@ sub parse_config
     while (my $line = <$fh>) {
         chomp $line;
         $do_add = 1;
-        if ($line =~ /^(\w+)[ ]+([\w\.\/]*)$/) {
+        if ($line =~ /^\s*(\w+)\s+\"?([\w\.\/\@]*)\"?\s*$/) {
             my $key = lc $1;
             my $value = $2;
             $self->{init_params}{$key} = $value;
