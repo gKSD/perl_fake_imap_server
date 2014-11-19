@@ -616,9 +616,13 @@ sub compare_msgs_in_fld {
             if ($msg->{uidl} =~ /$uid$/) {
                 unless ($msg->{microformat} =~ /$msg_body/ and 
                     $msg->{to} eq $msg_to and $msg->{from} eq $msg_from) {
-                    warn "Test FAILED: msg mismatch!";
+                    warn "Test FAILED: msgs in folders mismatch!";
                     return -1;
                 }
+            }
+            else {
+                warn "Test FAILED: msgs in folders mismatch!";
+                return -1;
             }
         }
     }
@@ -633,7 +637,7 @@ sub check_rimap_status {
     my $folders = $mesc->GetFolders;
     my %fuids = ();
     warn "^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ ".Dumper(@{$folders});
-    warn "****** ".Dumper(@{$matched_folders})."             2) ".Dumper($result->{$option});
+    warn "****** ".Dumper($matched_folders)."             2) ".Dumper($result->{$option});
 
 
     my $res_inbox = "";
@@ -651,49 +655,55 @@ sub check_rimap_status {
         }
     }
 
+    warn "RES_INBOX = $res_inbox, RIMAP_INBOX = $rimap_inbox";
+
     if ($mode eq "fetch") {
 
         warn "FETCH MODE";
         my $new_folders = []; #ссылка на пустой массив
-
+        my $res_folder = "";
         foreach my $folder (@{$folders}) {
-            if ($folder->{name} eq $rimap_inbox) {
-                push @{$new_folders}, $folder;
+            warn "current folder ".Dumper($folder);
+            warn "folder = ".$folder->{name};
+            my $found = 0;
+            if ($folder->{name} eq $rimap_inbox and length($res_inbox) > 0) {
+                $found = 1;
+                $res_folder = $res_inbox;
             }
             else {
-                foreach my $res_folder (keys %{$result->{$option}}) {
-                    if ($folder->{name} =~ /$res_folder$/) {
-                        push @{$new_folders}, $folder;
-                        last;
-                    }
-                }
-            }
-        }
-
-        
-        foreach my $new_folder (@{$new_folders}) {
-            my $msgs = $mesc->GetFolderMessages($new_folder->{id}); 
-            my $new_msgs = [];
-            foreach my $msg(@{$msgs}) {
-                my $found = 0;
-                foreach my $old_msg (@{$old_msgs_by_folder_id->{$new_folder->{id}}}) {
-                    if ($old_msg->{uidl} eq $msg->{uidl}) {
+                foreach my $key (keys %{$result->{$option}}) {
+                    if ($folder->{name} =~ /$key$/) {
                         $found = 1;
+                        $res_folder = $key;
                         last;
                     }
                 }
-                unless ($found) {
-                    push @{$new_msgs}, $msg;
+            }
+            if ($found) {
+                warn "FOUND";
+                warn "\$res_folder = $res_folder";
+                my $msgs = $mesc->GetFolderMessages($folder->{id}); 
+                my $new_msgs = [];
+                foreach my $msg(@{$msgs}) {
+                    $found = 0;
+                    foreach my $old_msg (@{$old_msgs_by_folder_id->{$folder->{id}}}) {
+                        warn "current MSG: ".Dumper($msg->{uidl}).", OLD MSG: ".Dumper($old_msg->{uidl});
+                        if ($old_msg->{uidl} eq $msg->{uidl}) {
+                            $found = 1;
+                            last;
+                        }
+                    }
+                    unless ($found) {
+                        push @{$new_msgs}, $msg;
+                    }
+                }
+                #compare_msgs
+                unless (compare_msgs_in_fld($new_msgs, $result->{$option}->{$res_folder}->{uids}, $mesc, $args)) {
+                    warn "Test FAILED: msg fetch error";
+                    return -1;
                 }
             }
-            #compare_msgs
-            unless (compare_msgs_in_fld($new_msgs, $result->{$option}->{$cur_res_folder}->{uids}, $mesc, $args)) {
-                warn "Test FAILED: msg fetch error";
-                return -1;
-            }
         }
-        warn "__________________________________________ ".Dumper($new_folders);
-        warn "__________________________________________ ".Dumper($new_msgs);
     }
     else {
         foreach my $matched_folder (@{$matched_folders}) {
@@ -701,7 +711,7 @@ sub check_rimap_status {
             my $found = 0;
             my $is_rimap_inbox = 0;
             my $cur_res_folder = "";
-            if ($matched_folder eq $rimap_inbox) {
+            if ($matched_folder eq $rimap_inbox and length($res_inbox) > 0) {
                 $cur_res_folder = $res_inbox;
                 $found = 1;
             }
