@@ -145,7 +145,7 @@ sub init
             $fh->close;
         }
     }
-    warn "fake imap dumper: ".Dumper($self)."\n";
+    #warn "fake imap dumper: ".Dumper($self)."\n";
 }
 
 sub run {
@@ -213,6 +213,7 @@ sub process_request {
         else {
             $self->notagged_send("BAD Unrecognised command (non-authenticated state)");
             $self->{logger}->debug(">>>: BAD Unrecognised command (non-authenticated state)");
+            $self->{state} = 0;
             $self->{selected_folder} = "";
             $bad_commands++;
             if ($self->check_bad_commands($bad_commands)) {last;}
@@ -464,8 +465,8 @@ sub process_request {
                     }
                 } 
             }
-            $self->tagged_send("NO CREATE error", $cmd_num);
-            $self->{logger}->debug(">>>: NO CREATE error"); 
+            $self->tagged_send("OK CREATE completed", $cmd_num);
+            $self->{logger}->debug(">>>: OK CREATE completed"); 
         }
         elsif ($line =~ /rename/i) {
             if ($self->{state} == 0) {
@@ -1228,7 +1229,6 @@ sub run_cmd_expunge {
             delete($folders{$self->{selected_folder}}->{uids}->{$uid});
         }
     }
-    $self->{selected_folder} = "";
     $self->{logger}->debug(">>>: $cmd_num OK EXPUNGE completed");
     $self->tagged_send("OK EXPUNGE completed", $cmd_num);
     return 1;

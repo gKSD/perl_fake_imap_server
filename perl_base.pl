@@ -377,4 +377,7 @@ sub func1 {
 }
 
 func1();
+
+my $it = 1<<9;
+warn "ITTTTT $it\n";
 1;

@@ -17,7 +17,7 @@ imap
 test
 [
      {
-        Inbox:     
+        INBOX  
         {
             uids
             {
@@ -37,8 +37,20 @@ test
                 ],
                 5 [ 09-Jul-2014 09:21:57 +0000 ]
             }
-            flags [ "&%^%^&hashnochildren", noselect]
+            flags [ "hashnochildren", noselect, Inbox]
             uidvalidity : 13123
+        }
+        Sent
+        {
+            flags [ Sent]
+            uids
+            {
+                1
+                [
+                    recent,
+                    09-Jul-2014 09:21:57 +0000;
+                ]
+            }
         }
         test
         {
@@ -58,7 +70,7 @@ test
         }
      }
      {
-        Inbox
+        INBOX
         {
             uids
             {
@@ -71,31 +83,62 @@ test
                 ],
             }
             uidvalidity : 13123
+            flags [Inbox]
         }
-        test
+        new_folder
         {
             uids:
             {
                 10 ["23-Aug-2013 00:00:33 +0000"]
             }
         }
+
+#        Sent
+#        {
+#            flags [ Sent]
+#            uids
+#            {
+#                1
+#                [
+#                    recent,
+#                    09-Jul-2014 09:21:57 +0000;
+#                ]
+#            }
+#        }
+
      }
 ]
 
 result
 {
-     
-     1
-     {
-        qqqq [123]
-     }
-     2
-     {
-        qqqq [567]
-     }
+    1
+    {
+        asdads :123123
+        adsfad :666
+    }     
     total
      {
-        inbox: [002, 005]
-        test: [10]
+        INBOX
+        {
+            uids
+            {
+                1 [seen,answered, "09-Jul-2014 09:21:57 +0000"],
+                3
+                [
+                    seen
+                    answered
+                    09-Jul-2014 09:21:57 +0000
+                ],
+            }
+            uidvalidity : 13123
+            flags [Inbox]
+        }
+        new_folder
+        {
+            uids:
+            {
+                10 ["23-Aug-2013 00:00:33 +0000"]
+            }
+        }
      }
 }

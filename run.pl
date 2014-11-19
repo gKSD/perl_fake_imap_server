@@ -387,7 +387,7 @@ sub check_collector_params {
         $params->{"EncPassword"} = "";
     }
     unless (exists($params->{"Flags"})) {
-        $params->{"Flags"} = 22;
+        $params->{"Flags"} = 22; #534; #22
     }
     unless (exists($params->{"WaitTime"})) {
         $params->{"WaitTime"} = 0;
@@ -417,7 +417,7 @@ sub check_collector_params {
         $params->{"ContactFetchRetries"} = 0;
     }
     unless (exists($params->{"Folder"})) {
-        $params->{"Folder"} = "0";
+        $params->{"Folder"} = "1";
     }
 }
 
@@ -516,6 +516,274 @@ sub select_from_db_table_by_ID{
     $sth->finish();
 }
 
+sub get_initial_rimap_state {
+    my ($folders, $fuids, $matched_folders, $args) = @_;
+    my $pUser = mPOP::Get()->GetUserFromID($args->{"UserID"});
+    my $mesc = $pUser->GetPMescalito;
+    $mesc->ClearFoldersCache;
+    $folders = $mesc->GetFolders;
+    %{$fuids} = ();
+    foreach my $folder (@{$folders}) {
+        $fuids->{$folder->{"id"}} = $mesc->GetFolderMessages($folder->{"id"});
+    }
+    warn "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! ".Dumper(@{$folders});
+
+
+    my $old_length = scalar(@{$matched_folders});
+    foreach my $folder (@{$folders}) {
+        #warn "matching folder is ".$folder->{name};
+        if ($old_length == 0) {
+            warn "111";
+            push @{$matched_folders}, $folder->{name};
+        }
+        else {
+            my $found = 0;
+            foreach my $matched_folder (@{$matched_folders}) {
+                #warn "matched folder $matched_folder";
+                if ($folder->{name} eq $matched_folder) {$found = 1;}
+            }
+            unless ($found) {
+                    #warn "fodler ro be matched ".$folder->{name};
+                    push @{$matched_folders}, $folder->{name};
+            }
+        }
+    }
+
+    #warn "&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&& ".Dumper($pUser);
+=begin
+    foreach my $folder (@{$folders}) {
+        if ($args->{Folder} == 0 and lc $folder->{name} eq "inbox") {
+            foreach my $key (keys %{$test_result->{total}}) {
+                warn "key in my test result ".Dumper(%{$test_result->{total}->{$key}});
+                if (lc $key eq "inbox" and $test_result->{total}->{$key}->{flags} 
+                        and /Inbox/i ~~ $test_result->{total}->{$key}->{flags}) {
+                    $fuids->{$folder->{"name"}} = $mesc->GetFolderMessages($folder->{"id"});
+                }
+            }
+        }
+        else {
+            if ($test_result->{total}->{$folder->{name}}) {
+                $fuids->{$folder->{"name"}} = $mesc->GetFolderMessages($folder->{"id"});
+            }
+        }
+    }
+=cut
+}
+
+sub compare_msgs_in_fld {
+    my ($msgs, $res_msgs, $mesc, $args) = @_;
+    #my ($folder, $res_folder, $mesc, $args) = @_;
+    #my $msgs = $mesc->GetFolderMessages($folder->{id});
+    warn "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ 1) ".Dumper($msgs)."   2)".Dumper($res_msgs);
+
+    my $fh = new IO::File;
+    my $msg_file = ($args->{"message"} ? $args->{"message"}:message.eml);
+    my $msg_to = "";
+    my $msg_from = "";
+    my $msg_body = "";
+    if ($fh->open("< $msg_file")){
+        my $sp = 0;
+        while (<$fh>) {
+            chomp;
+            chomp;
+            if (/^From\:\s+(.+)/) {
+                $msg_from = $1;
+            }
+            elsif (/^To\:\s+(.+)/) {
+                $msg_to = $1;
+            }
+            elsif(!/^\w+\:/){
+                if (length($_) == 0 and length($msg_body) > 0) {$msg_body .= " "; $sp = 1;}
+                else {
+                    if (!$sp and length($msg_body) > 0) {$msg_body .= " ";}
+                    $msg_body .= $_;
+                    $sp = 0;
+                }
+            }
+ 
+        }
+        $fh->close;
+    }
+    else {
+        $msg_to = "bbbbb <bbbbb\@mail.ru>";
+        $msg_from = "aaaaa <aaaaa\@mail.ru>";
+        $msg_body = "This is just fake message For tests";
+    }
+
+    foreach my $msg (@{$msgs}) {
+        #foreach my $uid (keys %{$res_folder->{uids}}) {
+        foreach my $uid (keys %{$res_msgs}) {
+            if ($msg->{uidl} =~ /$uid$/) {
+                unless ($msg->{microformat} =~ /$msg_body/ and 
+                    $msg->{to} eq $msg_to and $msg->{from} eq $msg_from) {
+                    warn "Test FAILED: msg mismatch!";
+                    return -1;
+                }
+            }
+        }
+    }
+    return 1;
+}
+
+sub check_rimap_status {
+    my ($result, $old_folders, $old_msgs_by_folder_id, $option, $mode, $matched_folders, $args) = @_;
+    my $pUser = mPOP::Get()->GetUserFromID($args->{"UserID"});
+    my $mesc = $pUser->GetPMescalito;
+    $mesc->ClearFoldersCache;
+    my $folders = $mesc->GetFolders;
+    my %fuids = ();
+    warn "^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ ".Dumper(@{$folders});
+    warn "****** ".Dumper(@{$matched_folders})."             2) ".Dumper($result->{$option});
+
+
+    my $res_inbox = "";
+    my $rimap_inbox = "";
+    foreach my $key (keys  %{$result->{$option}}) {
+        if (lc $key eq "inbox") {
+            $res_inbox = $key;
+            last;
+        }
+    }
+    foreach my $folder (@{$folders}) {
+        if ($folder->{"id"} eq $args->{"Folder"}) {
+            $rimap_inbox = $folder->{"name"};
+            last;
+        }
+    }
+
+    if ($mode eq "fetch") {
+
+        warn "FETCH MODE";
+        my $new_folders = []; #ссылка на пустой массив
+
+        foreach my $folder (@{$folders}) {
+            if ($folder->{name} eq $rimap_inbox) {
+                push @{$new_folders}, $folder;
+            }
+            else {
+                foreach my $res_folder (keys %{$result->{$option}}) {
+                    if ($folder->{name} =~ /$res_folder$/) {
+                        push @{$new_folders}, $folder;
+                        last;
+                    }
+                }
+            }
+        }
+
+        
+        foreach my $new_folder (@{$new_folders}) {
+            my $msgs = $mesc->GetFolderMessages($new_folder->{id}); 
+            my $new_msgs = [];
+            foreach my $msg(@{$msgs}) {
+                my $found = 0;
+                foreach my $old_msg (@{$old_msgs_by_folder_id->{$new_folder->{id}}}) {
+                    if ($old_msg->{uidl} eq $msg->{uidl}) {
+                        $found = 1;
+                        last;
+                    }
+                }
+                unless ($found) {
+                    push @{$new_msgs}, $msg;
+                }
+            }
+            #compare_msgs
+            unless (compare_msgs_in_fld($new_msgs, $result->{$option}->{$cur_res_folder}->{uids}, $mesc, $args)) {
+                warn "Test FAILED: msg fetch error";
+                return -1;
+            }
+        }
+        warn "__________________________________________ ".Dumper($new_folders);
+        warn "__________________________________________ ".Dumper($new_msgs);
+    }
+    else {
+        foreach my $matched_folder (@{$matched_folders}) {
+            warn "current matched-folder => **$matched_folder**";
+            my $found = 0;
+            my $is_rimap_inbox = 0;
+            my $cur_res_folder = "";
+            if ($matched_folder eq $rimap_inbox) {
+                $cur_res_folder = $res_inbox;
+                $found = 1;
+            }
+            else {
+                foreach my $res_folder (keys %{$result->{$option}}) {
+                    warn "res_folder => $res_folder";
+                    if ($matched_folder =~ /$res_folder$/) {
+                        $found = 1;
+                        $cur_res_folder = $res_folder;
+                        last;
+                    }
+                }
+            }
+
+            if ($found) {
+                warn "found case";
+                foreach $folder (@{$folders}) {
+                    warn "folder in folders: ".$folder->{name}. ",  cur_res_folder: $cur_res_folder";
+                    if ($folder->{name} eq $matched_folder) {
+                        #unless (compare_msgs_in_fld($folder, $result->{$option}->{$cur_res_folder}, $mesc, $args)) {
+                        unless (compare_msgs_in_fld($mesc->GetFolderMessages($folder->{id}), $result->{$option}->{$cur_res_folder}->{uids}, $mesc, $args)) {
+                            warn "Test FAILED: sync of msgs in folder ".$folder->{name}." failed ";
+                            return -1;
+                        }
+                    }
+                } 
+            }
+            else {
+                warn "else case";
+                if ($is_rimap_inbox) {
+                    warn "Test FAILED: folder ".$folder->{name}." rimap folder is absent!";
+                    return -1;
+                }
+                foreach $folder (@{$folders}) {
+                    if ($folder->{name} =~  /^\d+$matched_folder$/) {
+                        warn "Test FAILED: folder ".$folder->{name}." should have been deleted during sync";
+                        return -1;
+                    }
+                }
+            }
+        }
+=begin
+        foreach my $folder (@{$folders}) {
+            if ($args->{Folder} == 0 and lc $folder->{name} eq "inbox") {
+                foreach my $key (keys %{$test_result->{total}}) {
+                    warn "key in my test result ".Dumper(%{$test_result->{total}->{$key}});
+                    if (lc $key eq "inbox" and $test_result->{total}->{$key}->{flags} 
+                            and /Inbox/i ~~ $test_result->{total}->{$key}->{flags}) {
+                        $fuids->{$folder->{"name"}} = $mesc->GetFolderMessages($folder->{"id"});
+                    }
+                }
+            }
+            elsif ($test_result->{total}->{$folder->{name}}) {
+                $fuids->{$folder->{"name"}} = $mesc->GetFolderMessages($folder->{"id"});
+            }
+        }
+=cut
+    }
+    my $msgs = $mesc->GetFolderMessages(0);
+}
+ 
+sub get_folders {
+    my $matched_folders = shift;
+    my $args = shift;
+    my $pUser = mPOP::Get()->GetUserFromID($args->{"UserID"});
+    my $mesc = $pUser->GetPMescalito;
+    $mesc->ClearFoldersCache;
+    my $folders = $mesc->GetFolders;
+
+    my $old_length = scalar(@{$matched_folders});
+    foreach my $folder (@{$folders}) {
+        if ($old_length == 0) {
+            push @{$matched_folders}, $folder->{name};
+        }
+        else {
+            unless ($folder->{name} ~~ $matched_folders) {
+                push @{$matched_folders}, $folder->{name};
+            }
+        }
+    }
+}
+
 sub my_exit {
     my ($db, $collector_id, $config) = @_;
     delete_collector($db, $collector_id);
@@ -533,14 +801,13 @@ sub my_exit {
     $fh->close();
 }
 
-my %test_result1;
+
+my %test_result;
 my $tests_amount = 0;
 my $check_all = 0; #flag
 my $link_to_tests_amount = \$tests_amount;
 my $db = run_connect($parsed_args{'mysql_host'}, 'mysql', $parsed_args{'mysql_user'}, $parsed_args{'mysql_password'});
-warn "Dumper1 => ".Dumper(\%parsed_args)."\n";
 parse_imap_config(($parsed_args{"imap_config"}? $parsed_args{"imap_config"}: 'config.conf'),\%parsed_args);
-warn "Dumper => ".Dumper(\%parsed_args)."\n";
  
 check_collector_params($db,\%parsed_args);
 
@@ -555,7 +822,7 @@ my $collector_id = create_collector($db, $parsed_args{"UserID"}, $parsed_args{"U
 select_from_db_table_by_UserEmail($db, 'ksd001@mail.ru');
 
 if (defined $parsed_args{"test"}) {
-    parse_test_file($parsed_args{"test"}, \%test_result1, $link_to_tests_amount);
+    parse_test_file($parsed_args{"test"}, \%test_result, $link_to_tests_amount);
     my $cmd = "./fake_imap_server.pm run  ".(defined $parsed_args{"imap_config"}? 
                     "--config=".$parsed_args{"imap_config"}: '--config=config.conf').
                     "  --test=".$parsed_args{"test"};
@@ -566,28 +833,28 @@ else {
     die "file with test is undefined\n";
 }
 
+my %old_uids_by_fld = ();
+my @old_flds = ();
+my @matched_folders = ();
+my $mode = ($parsed_args{"Flags"} & 1<<9 ? "sync": "fetch");
+get_folders(\@matched_folders, \%parsed_args);
+if ($mode eq "fetch") {get_initial_rimap_state (\@old_flds, \%old_uids_by_fld, \@matched_folders, \%parsed_args);}
+
 for (my $i = 0; $i < $tests_amount; $i++) {
     $cmd = "../BUILD/collector --proto=imap --fetch-id=$collector_id --log=imap -l 5";
     system($cmd);
+
+    get_folders(\@matched_folders, \%parsed_args);
+    if ($test_result{$i + 1}) {
+        check_rimap_status(\%test_result, \@old_flds, \%old_uids_by_fld,$i + 1, $mode, \@matched_folders, \%parsed_args);
+        if ($mode eq "fetch") {get_initial_rimap_state (\@old_flds, \%old_uids_by_fld,\@matched_folders, \%parsed_args);}
+    }
 }
 
-
+get_folders(\@matched_folders, \%parsed_args);
+warn "folder structure: ".Dumper(\@matched_folders);
 eval {
-    my $pUser = mPOP::Get()->GetUserFromID($parsed_args{"UserID"});
-    my $mesc = $pUser->GetPMescalito;
-    #warn "dumper: ".Dumper($pUser)."\n";
-    my $ret = $mesc->GetFolders;
-    my $msgs = $mesc->GetFolderMessages(0);
-    warn Dumper(\@{$msgs});
-    
-    
-    
-    
-    #my $pMescFolders = mPOP::MescFolders->new( $pUser->GetPMescalito );
-    #warn "dumepr: ".Dumper($pMescFolders)."\n";
-    #my $sorted_folders = $pMescFolders->GetSortedFolders;
-    #warn "dumepr: ".Dumper($sorted_folders)."\n";
-
+    check_rimap_status(\%test_result, \@old_flds, \%old_uids_by_fld, "total", $mode, \@matched_folders,\%parsed_args);
 };
 if ($@) {
     warn "mauu\n";
