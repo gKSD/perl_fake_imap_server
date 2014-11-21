@@ -496,13 +496,6 @@ sub select_from_db_table_by_UserEmail{
 
     my $sth = $dbh->prepare('select * from rpop.imap where UserEmail=?');
     $sth->execute($UserEmail);
-    #my @result = $hash_ref->fetchrow_array();
-    #print "select: ".Dumper(\@result)."\n";
-
-    #while (my @row = $sth->fetchrow_array()) {
-    #    print "row: ".Dumper(@row)."\n";
-    #}
-
     my $result = $sth->fetchrow_hashref();
     $sth->finish();
 }
