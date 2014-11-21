@@ -264,6 +264,10 @@ sub do_parse {
                 print "it {} after little push: ".Dumper($it)."\n";
                 $is_first = 1;
             }
+            elsif (/^(\w+)[:]?\s*\{\s*\}\s*$/) {
+                $it->{$1} = "";
+                $is_first = 1;
+            }
             elsif (/^(\w+)[:]?\s*\{\s*([\s\,\w\(\),\:,\=,\>]*)\}\,?\s*$/) {
                 print "unsupported type of hash, check your config\n";
                 return -1;

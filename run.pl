@@ -66,11 +66,11 @@ if (defined $args) {
                     $parsed_args{$param} = $_;
                 }
                 else {
-                    warn "1 unrecognized param found (It should be like: '-p param_value' or '--param=param_value')\n";
+                    warn "unrecognized param found (It should be like: '-p param_value' or '--param=param_value')\n";
                 }
             }
             else {
-                warn "2 unrecognized param found (It should be like: '-p param_value' or '--param=param_value')\n";
+                warn "unrecognized param found (It should be like: '-p param_value' or '--param=param_value')\n";
             }
             $args = shift @ARGV;
         }
@@ -96,7 +96,6 @@ sub parse_imap_config {
     my $do_add = 0;
     while (my $line = <$fh>) {
         chomp $line;
-        warn "line = $line\n";
         $do_add = 1;
         if ($line =~ /^\s*(\w+)\s+\"?([\w\.\/\@]*)\"?\s*$/) {
             #my $key = lc $1;
@@ -255,6 +254,10 @@ sub do_parse {
                 @{$it->{$key}} = @ar;
                 $is_first = 1;
             }
+            elsif (/^(\w+)[:]?\s*\{\s*\}\s*$/) {
+                $it->{$1} = "";
+                $is_first = 1;
+            }
             elsif (/^(\w+)[:]?\s*\{\s*([\s\,\w\(\),\:,\=,\>]*)\}\,?\s*$/) {
                 print "unsupported type of hash, check your config\n";
                 return -1;
@@ -324,7 +327,7 @@ sub parse_test_file {
 
     eval {
         if (do_parse($fh, \%glhash, 0, \@brackets) <= 0) {
-            warn "ERROR in parsing\n";
+            warn "error in parsing test file\n";
             $fh->close();
             return -1;
         } else {
@@ -334,7 +337,7 @@ sub parse_test_file {
         }
     };
     if ($@) {
-        warn "start server error, check your config file, $@\n";
+        warn "error in parsing test file, $@\n";
     }
 
     $fh->close();
@@ -526,56 +529,26 @@ sub get_initial_rimap_state {
     foreach my $folder (@{$folders}) {
         $fuids->{$folder->{"id"}} = $mesc->GetFolderMessages($folder->{"id"});
     }
-    warn "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! ".Dumper(@{$folders});
-
 
     my $old_length = scalar(@{$matched_folders});
     foreach my $folder (@{$folders}) {
-        #warn "matching folder is ".$folder->{name};
         if ($old_length == 0) {
-            warn "111";
             push @{$matched_folders}, $folder->{name};
         }
         else {
             my $found = 0;
             foreach my $matched_folder (@{$matched_folders}) {
-                #warn "matched folder $matched_folder";
                 if ($folder->{name} eq $matched_folder) {$found = 1;}
             }
             unless ($found) {
-                    #warn "fodler ro be matched ".$folder->{name};
                     push @{$matched_folders}, $folder->{name};
             }
         }
     }
-
-    #warn "&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&& ".Dumper($pUser);
-=begin
-    foreach my $folder (@{$folders}) {
-        if ($args->{Folder} == 0 and lc $folder->{name} eq "inbox") {
-            foreach my $key (keys %{$test_result->{total}}) {
-                warn "key in my test result ".Dumper(%{$test_result->{total}->{$key}});
-                if (lc $key eq "inbox" and $test_result->{total}->{$key}->{flags} 
-                        and /Inbox/i ~~ $test_result->{total}->{$key}->{flags}) {
-                    $fuids->{$folder->{"name"}} = $mesc->GetFolderMessages($folder->{"id"});
-                }
-            }
-        }
-        else {
-            if ($test_result->{total}->{$folder->{name}}) {
-                $fuids->{$folder->{"name"}} = $mesc->GetFolderMessages($folder->{"id"});
-            }
-        }
-    }
-=cut
 }
 
 sub compare_msgs_in_fld {
     my ($msgs, $res_msgs, $mesc, $args) = @_;
-    #my ($folder, $res_folder, $mesc, $args) = @_;
-    #my $msgs = $mesc->GetFolderMessages($folder->{id});
-    warn "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ 1) ".Dumper($msgs)."   2)".Dumper($res_msgs);
-
     my $fh = new IO::File;
     my $msg_file = ($args->{"message"} ? $args->{"message"}:message.eml);
     my $msg_to = "";
@@ -611,17 +584,16 @@ sub compare_msgs_in_fld {
     }
 
     foreach my $msg (@{$msgs}) {
-        #foreach my $uid (keys %{$res_folder->{uids}}) {
         foreach my $uid (keys %{$res_msgs}) {
             if ($msg->{uidl} =~ /$uid$/) {
                 unless ($msg->{microformat} =~ /$msg_body/ and 
                     $msg->{to} eq $msg_to and $msg->{from} eq $msg_from) {
-                    warn "Test FAILED: msgs in folders mismatch!";
+                    warn "Test FAILED: msgs in folders mismatch! (or check your test file)";
                     return -1;
                 }
             }
             else {
-                warn "Test FAILED: msgs in folders mismatch!";
+                warn "Test FAILED: msgs in folders mismatch! (or check your test file)";
                 return -1;
             }
         }
@@ -636,9 +608,10 @@ sub check_rimap_status {
     $mesc->ClearFoldersCache;
     my $folders = $mesc->GetFolders;
     my %fuids = ();
-    warn "^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ ".Dumper(@{$folders});
-    warn "****** ".Dumper($matched_folders)."             2) ".Dumper($result->{$option});
-
+    unless ($result->{$option}) {
+        warn "Error: result test part \"$option\" is not defined in test file";
+        return -1;
+    }
 
     my $res_inbox = "";
     my $rimap_inbox = "";
@@ -655,16 +628,10 @@ sub check_rimap_status {
         }
     }
 
-    warn "RES_INBOX = $res_inbox, RIMAP_INBOX = $rimap_inbox";
-
     if ($mode eq "fetch") {
-
-        warn "FETCH MODE";
-        my $new_folders = []; #ссылка на пустой массив
+        my $new_folders = [];
         my $res_folder = "";
         foreach my $folder (@{$folders}) {
-            warn "current folder ".Dumper($folder);
-            warn "folder = ".$folder->{name};
             my $found = 0;
             if ($folder->{name} eq $rimap_inbox and length($res_inbox) > 0) {
                 $found = 1;
@@ -680,14 +647,11 @@ sub check_rimap_status {
                 }
             }
             if ($found) {
-                warn "FOUND";
-                warn "\$res_folder = $res_folder";
                 my $msgs = $mesc->GetFolderMessages($folder->{id}); 
                 my $new_msgs = [];
                 foreach my $msg(@{$msgs}) {
                     $found = 0;
                     foreach my $old_msg (@{$old_msgs_by_folder_id->{$folder->{id}}}) {
-                        warn "current MSG: ".Dumper($msg->{uidl}).", OLD MSG: ".Dumper($old_msg->{uidl});
                         if ($old_msg->{uidl} eq $msg->{uidl}) {
                             $found = 1;
                             last;
@@ -697,7 +661,6 @@ sub check_rimap_status {
                         push @{$new_msgs}, $msg;
                     }
                 }
-                #compare_msgs
                 unless (compare_msgs_in_fld($new_msgs, $result->{$option}->{$res_folder}->{uids}, $mesc, $args)) {
                     warn "Test FAILED: msg fetch error";
                     return -1;
@@ -707,7 +670,6 @@ sub check_rimap_status {
     }
     else {
         foreach my $matched_folder (@{$matched_folders}) {
-            warn "current matched-folder => **$matched_folder**";
             my $found = 0;
             my $is_rimap_inbox = 0;
             my $cur_res_folder = "";
@@ -717,7 +679,6 @@ sub check_rimap_status {
             }
             else {
                 foreach my $res_folder (keys %{$result->{$option}}) {
-                    warn "res_folder => $res_folder";
                     if ($matched_folder =~ /$res_folder$/) {
                         $found = 1;
                         $cur_res_folder = $res_folder;
@@ -727,11 +688,8 @@ sub check_rimap_status {
             }
 
             if ($found) {
-                warn "found case";
                 foreach $folder (@{$folders}) {
-                    warn "folder in folders: ".$folder->{name}. ",  cur_res_folder: $cur_res_folder";
                     if ($folder->{name} eq $matched_folder) {
-                        #unless (compare_msgs_in_fld($folder, $result->{$option}->{$cur_res_folder}, $mesc, $args)) {
                         unless (compare_msgs_in_fld($mesc->GetFolderMessages($folder->{id}), $result->{$option}->{$cur_res_folder}->{uids}, $mesc, $args)) {
                             warn "Test FAILED: sync of msgs in folder ".$folder->{name}." failed ";
                             return -1;
@@ -740,7 +698,6 @@ sub check_rimap_status {
                 } 
             }
             else {
-                warn "else case";
                 if ($is_rimap_inbox) {
                     warn "Test FAILED: folder ".$folder->{name}." rimap folder is absent!";
                     return -1;
@@ -753,22 +710,6 @@ sub check_rimap_status {
                 }
             }
         }
-=begin
-        foreach my $folder (@{$folders}) {
-            if ($args->{Folder} == 0 and lc $folder->{name} eq "inbox") {
-                foreach my $key (keys %{$test_result->{total}}) {
-                    warn "key in my test result ".Dumper(%{$test_result->{total}->{$key}});
-                    if (lc $key eq "inbox" and $test_result->{total}->{$key}->{flags} 
-                            and /Inbox/i ~~ $test_result->{total}->{$key}->{flags}) {
-                        $fuids->{$folder->{"name"}} = $mesc->GetFolderMessages($folder->{"id"});
-                    }
-                }
-            }
-            elsif ($test_result->{total}->{$folder->{name}}) {
-                $fuids->{$folder->{"name"}} = $mesc->GetFolderMessages($folder->{"id"});
-            }
-        }
-=cut
     }
     my $msgs = $mesc->GetFolderMessages(0);
 }
@@ -799,8 +740,6 @@ sub my_exit {
     delete_collector($db, $collector_id);
 
     my $pid_file = ($config->{pid_file} ? $config->{pid_file}: "/tmp/server.pid");
-    warn "pid_file = $pid_file\n";
-
     my $fh = IO::File->new("< $pid_file");
     if (defined $fh) {
         my $line = <$fh>;
@@ -862,13 +801,10 @@ for (my $i = 0; $i < $tests_amount; $i++) {
 }
 
 get_folders(\@matched_folders, \%parsed_args);
-warn "folder structure: ".Dumper(\@matched_folders);
 eval {
     check_rimap_status(\%test_result, \@old_flds, \%old_uids_by_fld, "total", $mode, \@matched_folders,\%parsed_args);
 };
-if ($@) {
-    warn "mauu\n";
-}
+if ($@) {}
 my_exit($db, $collector_id, \%imap_config);
 
 1;

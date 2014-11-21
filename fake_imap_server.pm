@@ -1119,8 +1119,7 @@ sub send_fake_msg {
     my $fake_message = "From: aaaaa <aaaaa\@mail.ru>\r\nTo: bbbbb <bbbbb\@mail.ru>\r\nSubject: this is just subject\r\n";
     $fake_message .= "Date: Wed, 23 Jul 2014 17:53:07 +0400\r\n";
     $fake_message .= "\r\n";
-    $fake_message .= "This is just fake message\r\nTo testing our imap-collector\r\n";
-    $fake_message .= "On memory leaks\r\n";
+    $fake_message .= "This is just fake message\r\nFor tests\r\n";
 
     my $length = length($fake_message);
     my $client = $self->{client};
@@ -1812,6 +1811,10 @@ sub do_parse {
                     if ($ar[$i] =~ /^\"(.*)\"$/) {$ar[$i] = $1;}
                 }
                 @{$it->{$key}} = @ar;
+                $is_first = 1;
+            }
+            elsif (/^(\w+)[:]?\s*\{\s*\}\s*$/) {
+                $it->{$1} = "";
                 $is_first = 1;
             }
             elsif (/^(\w+)[:]?\s*\{\s*([\s\,\w\(\),\:,\=,\>]*)\}\,?\s*$/) {
