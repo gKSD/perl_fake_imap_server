@@ -390,7 +390,7 @@ sub check_collector_params {
         $params->{"EncPassword"} = "";
     }
     unless (exists($params->{"Flags"})) {
-        $params->{"Flags"} = 22; #534; #22
+        $params->{"Flags"} = 22;#534; #22
     }
     unless (exists($params->{"WaitTime"})) {
         $params->{"WaitTime"} = 0;
@@ -661,7 +661,7 @@ sub check_rimap_status {
                         push @{$new_msgs}, $msg;
                     }
                 }
-                unless (compare_msgs_in_fld($new_msgs, $result->{$option}->{$res_folder}->{uids}, $mesc, $args)) {
+                if (compare_msgs_in_fld($new_msgs, $result->{$option}->{$res_folder}->{uids}, $mesc, $args) <= 0) {
                     warn "Test FAILED: msg fetch error";
                     return -1;
                 }
@@ -690,7 +690,7 @@ sub check_rimap_status {
             if ($found) {
                 foreach $folder (@{$folders}) {
                     if ($folder->{name} eq $matched_folder) {
-                        unless (compare_msgs_in_fld($mesc->GetFolderMessages($folder->{id}), $result->{$option}->{$cur_res_folder}->{uids}, $mesc, $args)) {
+                        if (compare_msgs_in_fld($mesc->GetFolderMessages($folder->{id}), $result->{$option}->{$cur_res_folder}->{uids}, $mesc, $args) <= 0) {
                             warn "Test FAILED: sync of msgs in folder ".$folder->{name}." failed ";
                             return -1;
                         }
@@ -786,6 +786,7 @@ my %old_uids_by_fld = ();
 my @old_flds = ();
 my @matched_folders = ();
 my $mode = ($parsed_args{"Flags"} & 1<<9 ? "sync": "fetch");
+my $test_failed = 0;
 get_folders(\@matched_folders, \%parsed_args);
 if ($mode eq "fetch") {get_initial_rimap_state (\@old_flds, \%old_uids_by_fld, \@matched_folders, \%parsed_args);}
 
@@ -795,11 +796,17 @@ for (my $i = 0; $i < $tests_amount; $i++) {
 
     get_folders(\@matched_folders, \%parsed_args);
     if ($test_result{$i + 1}) {
-        check_rimap_status(\%test_result, \@old_flds, \%old_uids_by_fld,$i + 1, $mode, \@matched_folders, \%parsed_args);
+        if (check_rimap_status(\%test_result, \@old_flds, \%old_uids_by_fld,$i + 1, $mode, \@matched_folders, \%parsed_args) <= 0) {
+            $test_failed = 1;
+            last;
+        };
         if ($mode eq "fetch") {get_initial_rimap_state (\@old_flds, \%old_uids_by_fld,\@matched_folders, \%parsed_args);}
     }
 }
-
+if ($test_failed) {
+    my_exit($db, $collector_id, \%imap_config);
+    exit;
+}
 get_folders(\@matched_folders, \%parsed_args);
 eval {
     check_rimap_status(\%test_result, \@old_flds, \%old_uids_by_fld, "total", $mode, \@matched_folders,\%parsed_args);
