@@ -148,7 +148,7 @@ sub do_parse {
                         if ($prev_line =~ /[\:\,\;\-\=]$/) { chop $prev_line;}
                         push @{$it}, $prev_line;
                     }
-                } 
+                }
                 my %hash;
                 push @{$it}, \%hash;
                 if (do_parse($fh, \%{$it->[-1]}, 0, $brackets) <= 0) {return -1;}
@@ -304,7 +304,7 @@ sub do_parse {
                 }
                 $prev_line = $_;
             } else {
-                warn "Syntax error in config, check {} or [] brackets\n"; 
+                warn "Syntax error in config, check {} or [] brackets\n";
                 return -1;
             }
         }
@@ -315,8 +315,6 @@ sub parse_test_file {
     my $test_file = shift;
     my $result = shift;
     my $test_counter = shift;
- 
-
     my $fh = new IO::File;
     unless ($fh->open("$test_file")) {
         die "file($test_file) with imap tests not found\n";
@@ -390,7 +388,7 @@ sub check_collector_params {
         $params->{"EncPassword"} = "";
     }
     unless (exists($params->{"Flags"})) {
-        $params->{"Flags"} = 22;#534; #22
+        $params->{"Flags"} = 534;#534; #22
     }
     unless (exists($params->{"WaitTime"})) {
         $params->{"WaitTime"} = 0;
@@ -566,7 +564,6 @@ sub compare_msgs_in_fld {
                     $sp = 0;
                 }
             }
- 
         }
         $fh->close;
     }
@@ -577,18 +574,21 @@ sub compare_msgs_in_fld {
     }
 
     foreach my $msg (@{$msgs}) {
+        my $found = 0;
         foreach my $uid (keys %{$res_msgs}) {
             if ($msg->{uidl} =~ /$uid$/) {
-                unless ($msg->{microformat} =~ /$msg_body/ and 
+                unless ($msg->{microformat} =~ /$msg_body/ and
                     $msg->{to} eq $msg_to and $msg->{from} eq $msg_from) {
                     warn "Test FAILED: msgs in folders mismatch! (or check your test file)";
                     return -1;
                 }
+                $found = 1;
+                last;
             }
-            else {
-                warn "Test FAILED: msgs in folders mismatch! (or check your test file)";
-                return -1;
-            }
+        }
+        unless ($found) {
+            warn "Test FAILED: msgs in folders mismatch! (or check your test file)";
+            return -1;
         }
     }
     return 1;
@@ -640,7 +640,7 @@ sub check_rimap_status {
                 }
             }
             if ($found) {
-                my $msgs = $mesc->GetFolderMessages($folder->{id}); 
+                my $msgs = $mesc->GetFolderMessages($folder->{id});
                 my $new_msgs = [];
                 foreach my $msg(@{$msgs}) {
                     $found = 0;
@@ -688,7 +688,7 @@ sub check_rimap_status {
                             return -1;
                         }
                     }
-                } 
+                }
             }
             else {
                 if ($is_rimap_inbox) {
@@ -706,7 +706,7 @@ sub check_rimap_status {
     }
     my $msgs = $mesc->GetFolderMessages(0);
 }
- 
+
 sub get_folders {
     my $matched_folders = shift;
     my $args = shift;
@@ -750,7 +750,7 @@ my $check_all = 0; #flag
 my $link_to_tests_amount = \$tests_amount;
 my $db = run_connect($parsed_args{'mysql_host'}, 'mysql', $parsed_args{'mysql_user'}, $parsed_args{'mysql_password'});
 parse_imap_config(($parsed_args{"imap_config"}? $parsed_args{"imap_config"}: 'config.conf'),\%parsed_args);
- 
+
 check_collector_params($db,\%parsed_args);
 
 my $collector_id = create_collector($db, $parsed_args{"UserID"}, $parsed_args{"UserEmail"},
@@ -765,7 +765,7 @@ select_from_db_table_by_UserEmail($db, 'ksd001@mail.ru');
 
 if (defined $parsed_args{"test"}) {
     parse_test_file($parsed_args{"test"}, \%test_result, $link_to_tests_amount);
-    my $cmd = "./fake_imap_server.pm run  ".(defined $parsed_args{"imap_config"}? 
+    my $cmd = "./fake_imap_server.pm run  ".(defined $parsed_args{"imap_config"}?
                     "--config=".$parsed_args{"imap_config"}: '--config=config.conf').
                     "  --test=".$parsed_args{"test"};
     system($cmd);

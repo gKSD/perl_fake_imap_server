@@ -43,7 +43,7 @@ if(defined $argument) {
             }
             elsif ($argument =~ /^\-[hplcts]$/g) {
                 my $param = $argument;
-                if(defined ($_ = shift @ARGV) and (m/^([\w\.\/]+)$/)){    
+                if(defined ($_ = shift @ARGV) and (m/^([\w\.\/]+)$/)){
                         switch ($param) {
                             case '-h' { $param = 'host' }
                             case '-p' { $param = 'port' }
@@ -85,10 +85,7 @@ sub new {
     my $class = ref($proto) || $proto;
     my $self = {};
     my $args  = @_ == 1 ? shift : {@_};
-    
     $self->{client} = undef;
-    
-    #$self->{logger}->debug( "Args: ".Dumper(scalar(keys %$args)));
     $self->{init_params} = undef;                       # $args;
     $self->{server} = undef;                            # хранит соединения
     $self->{imap} = undef;                              # сценарий ответов
@@ -180,11 +177,11 @@ sub run {
         }
         if ($pid)
         {
-            close $self->{client};        # Only meaningful in the client 
+            close $self->{client};        # Only meaningful in the client
         }
         else
         {
-            $self->{client}->autoflush(1);    # Always a good idea 
+            $self->{client}->autoflush(1);    # Always a good idea
             close $self->{server};
             $self->process_request();
         }
@@ -380,7 +377,7 @@ sub process_request {
                 next;
             }
             my $folder_with_quotes = $1;
-            my $folder = (($folder_with_quotes =~ /^\"(.+)\"$/)? $1: $folder_with_quotes); 
+            my $folder = (($folder_with_quotes =~ /^\"(.+)\"$/)? $1: $folder_with_quotes);
             $self->{selected_folder} = $folder;
 
             $self->notagged_send("0 exists");
@@ -414,7 +411,7 @@ sub process_request {
                 next;
             }
             my $folder_with_quotes = $1;
-            my $folder = (($folder_with_quotes =~ /^\"(.+)\"$/)? $1: $folder_with_quotes); 
+            my $folder = (($folder_with_quotes =~ /^\"(.+)\"$/)? $1: $folder_with_quotes);
             $self->{selected_folder} = $folder;
             $self->notagged_send("0 exists");
             $self->tagged_send("OK [READ-ONLY] EXAMINE Completed", $cmd_num);
@@ -463,10 +460,10 @@ sub process_request {
                     if ($self->send_answer_from_config($self->{imap}->{"create"}, $cmd_num)) {
                         next;
                     }
-                } 
+                }
             }
             $self->tagged_send("OK CREATE completed", $cmd_num);
-            $self->{logger}->debug(">>>: OK CREATE completed"); 
+            $self->{logger}->debug(">>>: OK CREATE completed");
         }
         elsif ($line =~ /rename/i) {
             if ($self->{state} == 0) {
@@ -484,7 +481,7 @@ sub process_request {
                     next;
                 }
             }
-            $self->tagged_send("NO RENAME error", $cmd_num); 
+            $self->tagged_send("NO RENAME error", $cmd_num);
             $self->{logger}->debug(">>>: $cmd_num NO RENAME error");
         }
         elsif ($line =~ /subscribe/i) {
@@ -564,7 +561,7 @@ sub process_request {
                     }
                 }
             }
-            $self->tagged_send("OK CHECK completed", $cmd_num); 
+            $self->tagged_send("OK CHECK completed", $cmd_num);
             $self->{logger}->debug(">>>: $cmd_num OK CHECK completed");
         }
         elsif ($line =~ /unselect/i) {
@@ -585,7 +582,7 @@ sub process_request {
                     next;
                 }
             }
-            $self->tagged_send("OK UNSELECT completed", $cmd_num); 
+            $self->tagged_send("OK UNSELECT completed", $cmd_num);
             $self->{logger}->debug(">>>: $cmd_num OK UNSELECT completed");
         }
         elsif ($line =~ /expunge/i) {
@@ -604,7 +601,7 @@ sub process_request {
                     next;
                 }
             }
-            $self->tagged_send("OK EXPUNGE completed", $cmd_num); 
+            $self->tagged_send("OK EXPUNGE completed", $cmd_num);
             $self->{logger}->debug(">>>: $cmd_num OK EXPUNGE completed");
         }
         elsif ($line =~ /search/i) {
@@ -639,7 +636,7 @@ sub process_request {
                     next;
                 }
             }
-            $self->tagged_send("OK STORE completed", $cmd_num); 
+            $self->tagged_send("OK STORE completed", $cmd_num);
             $self->{logger}->debug(">>>: $cmd_num OK STORE completed");
         }
         elsif ($line =~ /uid copy/i) {
@@ -676,7 +673,7 @@ sub process_request {
                     next;
                 }
             }
-            $self->tagged_send("OK CLOSE completed", $cmd_num); 
+            $self->tagged_send("OK CLOSE completed", $cmd_num);
             $self->{logger}->debug(">>>: $cmd_num OK CLOSE completed");
         }
         elsif ($line =~ /delete/i) {
@@ -826,10 +823,10 @@ sub run_cmd_select {
         return 1;
     }
     my $folder_with_quotes = $self->remove_escapes($2);
-    my $folder = (($folder_with_quotes =~ /^\"(.+)\"$/)? $1: $folder_with_quotes); 
-   
+    my $folder = (($folder_with_quotes =~ /^\"(.+)\"$/)? $1: $folder_with_quotes);
+
     $self->{selected_folder} = $folder;
-    
+
     my $n = $self->get_msg_amount(\%{$folders{$folder}{"uids"}});
     $self->notagged_send("$n EXISTS");
     $self->{logger}->debug(">>>: $n EXISTS");
@@ -899,7 +896,7 @@ sub run_cmd_store {
         my $flag_operation = $2;
         my $flags = $4;
         my $silent = ($3? 1: 0);
-        
+
         my @uids = ();
         my $state = -1;
         if ($str_uids =~ /:/) {
@@ -1040,7 +1037,7 @@ sub run_cmd_fetch {
         my $fflags = $3;
         my $answer;
         if ($2) {
-             my $right = $2; 
+             my $right = $2;
              my $uids = $folders{$folder}{"uids"};
              my $ok;
              foreach my $uid (sort keys %{$uids}) {
@@ -1091,7 +1088,7 @@ sub run_fetch_uid {
     my $answer = $self->{fetch_num}->{$folder}->{$fuid}." FETCH (UID $fuid ";
     my $date = "";
     my $uid_flags = "";
-    
+
     foreach my $flag (@{$uid}) {
         if ($flag =~ /\d+\-\w+\-\d+\s*+\d+\:\d+:\d+\s+\+?\d*\s*/) {
             $date = $flag;
@@ -1099,7 +1096,6 @@ sub run_fetch_uid {
         else {
             $uid_flags .= "\\$flag ";
         }
-                    
     }
     if ($fflags =~ /internaldate/i) {
         if ($date) {
@@ -1142,7 +1138,7 @@ sub run_cmd_delete {
 
     my %folders = %{$self->{test}[$self->{connection_number}]};
     unless (%folders) {return -1;}
-    
+
     my @ar = split('\s', $delete);
     my $del_folder = $self->remove_escapes($ar[2]);
     if ($ar[2] =~ /^\"(.+)\"$/) {
@@ -1181,7 +1177,7 @@ sub run_cmd_rename {
     my @ar = split('\s', $rename);
     my $destiny = $self->remove_escapes($ar[3]);
     my $source = $self->remove_escapes($ar[2]);
-    
+
     if ($destiny =~ /^\"(.+)\"$/) {
         $destiny = $1;
     }
@@ -1327,7 +1323,7 @@ sub get_msg_amount {
 sub get_recent_uids {
     my ($self, $folder) = @_;
     my $n = 0;
-    if (%{$folder}) { 
+    if (%{$folder}) {
         foreach my $uid (keys %{$folder}) {
             if (/recent/i ~~ \@{$folder->{$uid}}) {
                 $n++;
@@ -1456,180 +1452,6 @@ sub check_test_file_structure {
     return 1;
 }
 
-sub parse_test_file {
-    my $self = shift;
-    my $test_file = shift;
-
-    my $fh = new IO::File;
-    unless ($fh->open("< $test_file")) {
-        die "file($test_file) with imap tests not found\n";
-    }
-
-    my %imap = ();
-    my $key;
-    my @test;
-    my $k = 0;
-    my $folder_name;
-    my $folder_attribute;
-    my $uid;
-
-    my $is_hash = 0;
-    my $is_array = 0;
-
-    my $is_imap = 0;
-    my $is_test = 0;
-    while (<$fh>) {
-        chomp $_;
-        s/\s*//;
-
-        if (/^\{\}$/) {
-            next;
-        }
-        if (/^\[\]$/) {
-            next;
-        }
-        if (/^\{$/) {
-            $is_hash = 1;
-            $k++;
-            next;
-        }
-        if (/^\[$/) {
-            $k++;
-            $is_array = 1;
-            next;
-        } 
-        if (/^[\}\]]/) {
-            $k--;
-            if (/^\}$/) {
-                $is_hash = 0;
-            }
-            else {
-                $is_array = 0;
-            }
-            if ($k == 0) {
-                $is_imap = 0;
-                $is_test = 0;
-            }
-            next;
-        }
-
-        if (/^$/) {
-            next;
-        }
-        if (/^\#/) {
-            next;
-        }
-
-        if ($k == 0) {
-            $key = lc $_;
-            if ($key eq 'imap') {
-                $is_imap = 1;
-            }
-            elsif ($key eq 'test') {
-                $is_test = 1;
-            }
-        }
-        elsif ($k == 1) {
-            if($is_imap) {
-                /^(\w+)/;
-                $key = lc $1;
-                unless ($key eq 'login' or $key eq 'capability' or $key eq 'noop' or $key eq 'select'
-                    or $key eq 'status' or $key eq 'fetch' or $key eq 'id' or $key eq 'examine'
-                    or $key eq 'create' or $key eq 'delete' or $key eq 'rename' or $key eq 'subscribe'
-                    or $key eq 'unsubscribe' or $key eq 'list' or $key eq 'xlist' or $key eq 'lsub'
-                    or $key eq 'append' or $key eq 'check' or $key eq 'unselect' or $key eq 'expunge'
-                    or $key eq 'search' or $key eq 'store' or $key eq 'copy' or $key eq 'move'
-                    or $key eq 'close' or $key eq 'logout' or $key eq 'namespace') {
-                    warn "invalid key in imap part in $test_file\n";
-                }
-                my @ar;
-                @{$imap{$key}} = @ar;
-            }
-            elsif ($is_test) {
-                #my @ar = [];
-                #push @test, @ar;
-                my %hash = ();
-                push @test, \%hash;
-            }
-        }
-        elsif ($k == 2) {
-            if ($is_imap) {
-                push @{$imap{$key}}, $_;
-            }
-            elsif($is_test) {
-                my %folder;
-                my %hash;
-
-                /^(\w+)/;
-                $folder_name = $1;
-                #%{$folder{$_}} = %hash;
-                $test[-1]->{$folder_name} = \%hash;
-                #$test[-1] = \%folder;
-
-                #push @{$test[-1]}, \%folder;
-=begin
-                if (/^(\w+):[ ]+\[([\s\,\w]+)\]$/) {
-                    my $key1 = $1;
-                    my $value = $2;
-                    my %hash = ();
-                    my @ar = split (/, */, $value);
-
-                    @{$hash{$key1}} = @ar;
-                    push @{$test[-1]}, \%hash;
-                }
-=cut
-            }
-        }
-        elsif ($k == 3) {
-            if ($is_test) {
-                if (/^(\w+)[:]*[ ]*[\(\[]\s*([\s\,\w\(\)]+)[\]\)][\,]*$/) {
-                    my $key1 = $1;
-                    my $value = $2;
-                    my @ar = split (/, */, $value);
-
-                    @{$test[-1]->{$folder_name}->{$key1}} = @ar;
-                    $folder_attribute = $key1;
-                }
-                elsif (/^(\w+)[:\s]*$/) {
-                    my @ar;
-                    @{$test[-1]->{$folder_name}->{$1}} = @ar;
-                    $folder_attribute = $1;
-                }
-            }
-        }
-        elsif ($k == 4) {
-           if ($is_test) {
-                if (/^(\w+)[:]*[ ]*[\[\(]\s*([\s\,\w\(\)]+)[\]\)][\,]*$/) {
-                    my $key1 = $1;
-                    my $value = $2;
-                    my @ar = split (/, */, $value);
-                    my %hash = ($key1 => \@ar);
-                    push @{$test[-1]->{$folder_name}->{$folder_attribute}}, \%hash;
-                }
-                elsif (/^(\w+)[:\s]*$/) {
-                    my @ar;
-                    my %hash = ($1 => \@ar);
-                    push @{$test[-1]->{$folder_name}->{$folder_attribute}}, \%hash;
-                    $uid = $1;
-                }
-           }
-        }
-        elsif ($k == 5) {
-            if ($is_test) {
-                /^(\w+)\,*$/;
-                push @{@{$test[-1]->{$folder_name}->{$folder_attribute}}[-1]->{$uid}}, $1;
-            }
-        }
-    }
-    if ($k != 0) {
-        die "syntax error in $test_file (check '{' and '}' amount)\n";
-    }
-
-    $fh->close();
-    $self->{test} = \@test;
-    $self->{imap} = \%imap;
-}
-
 sub parse_test_file1 {
     my $self = shift;
     my $test_file = shift;
@@ -1707,7 +1529,7 @@ sub do_parse {
                         if ($prev_line =~ /[\:\,\;\-\=]$/) { chop $prev_line;}
                         push @{$it}, $prev_line;
                     }
-                } 
+                }
                 my %hash;
                 push @{$it}, \%hash;
                 if ($self->do_parse($fh, \%{$it->[-1]}, 0, $brackets) <= 0) {return -1;}
@@ -1863,7 +1685,7 @@ sub do_parse {
                 }
                 $prev_line = $_;
             } else {
-                $self->{logger}->debug("Syntax error in config, check {} or [] brackets, "); 
+                $self->{logger}->debug("Syntax error in config, check {} or [] brackets, ");
                 return -1;
             }
         }
