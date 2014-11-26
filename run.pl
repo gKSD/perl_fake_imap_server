@@ -896,8 +896,13 @@ foreach my $test_file (@files) {
         if ($test_result{$i + 1}) {
             if (check_rimap_status(\%test_result, \@old_flds, \%old_uids_by_fld, $i + 1, $mode, \@matched_folders, \%parsed_args) <= 0) {
                 $is_test_failed = 1;
+                print "\x1b[31mTest: $test_file\x1b[0m \n";
                 last;
-            };
+            }
+            else {
+                print "\x1b[32mTest passed\x1b[0m \n";
+                print "\x1b[32mTest: $test_file\x1b[0m \n";
+            }
             if ($mode eq "fetch") {get_initial_rimap_state (\@old_flds, \%old_uids_by_fld,\@matched_folders, \%parsed_args);}
         }
     }
@@ -910,8 +915,13 @@ foreach my $test_file (@files) {
     if(check_rimap_status(\%test_result, \@old_flds, \%old_uids_by_fld, "total", $mode, \@matched_folders,\%parsed_args) <= 0) {
         $test_failed++;
         push @failed_files, $test_file;
+        print "\x1b[31mTest: $test_file\x1b[0m \n";
     }
-    else {$test_passed++;}
+    else {
+        $test_passed++;
+        print "\x1b[32mTest passed\x1b[0m \n";
+        print "\x1b[32mTest: $test_file\x1b[0m \n";
+    }
     my_exit($db, $collector_id, \%parsed_args);
 }
 if ($test_passed == $test_files) {
