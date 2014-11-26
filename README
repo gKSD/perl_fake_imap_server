@@ -3,7 +3,7 @@ Perl dependencies
    Log::Log4perl
    IO::File
    Switch
-   Time::HiRes 
+   Time::HiRes
 
 Run tests
 ---------------------
@@ -28,20 +28,20 @@ host      - host to run Fake Imap Server
 port      - port to run Fake Imap Server
 
 test      - path to file with test
-test_dir  - path to directory with file test (ONLY FOR run.pl)
+test_dir  - path to directory with file test (ONLY FOR run.pl). Ignored if test param specified
 
 message   - fake message for IMAP FETCH command answer
 mode      - config mode for Fake Imap Server on (if not specified Server answers with hardcode answers)
 config    - separate config for Fake Imap Server
 
 exec      - path to collector binary
+ping_retries - retries of pinging Fake Imap Server (ONLY FOR run.pl)
 
 Collector params: (ONLY FOR run.pl)
     UserEmail           - local email (real email for db table mPOP.user)
     Password            - random string (fake)
     Email               - random string (fake)
     UserID              - local user ID (real email for db table mPOP.user)
-    Email               - random string
     Host                - remote host (Fake Imap Server host)
     User                - random sting
     Flags               - collector flags
@@ -50,6 +50,8 @@ Collector params: (ONLY FOR run.pl)
     ConnectionMode      - no-ssl/ssl
     AutoConfigure       - yes/no (default no)
     ContactFetchRetries - number of retries
+
+Email or UserID must be set.
 
 Mysql db params: (ONLY FOR run.pl)
     mysql_host

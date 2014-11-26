@@ -6,6 +6,7 @@ use Switch;
 use Data::Dumper;
 use DBI;
 use Time::HiRes qw(gettimeofday);
+use IO::Socket;
 
 use Mailbox;
 use mPOP;
@@ -661,7 +662,7 @@ sub check_rimap_status {
                     }
                 }
                 if (compare_msgs_in_fld($new_msgs, $result->{$option}->{$res_folder}->{uids}, $args) <= 0) {
-                    print "\x1b[31mTest FAILED:\x1b[0m  msg fetch error\n";
+                    print "\x1b[31mTest FAILED:\x1b[0m  msg fetch error (check: result->{$option}, folder: ".$folder->{name}.")\n";
                     return -1;
                 }
             }
@@ -704,7 +705,7 @@ sub check_rimap_status {
                     if ($folder->{name} eq $matched_folder) {
                         $found = 1;
                         if (compare_msgs_in_fld($mesc->GetFolderMessages($folder->{id}), $result->{$option}->{$cur_res_folder}->{uids}, $args) <= 0) {
-                            print "\x1b[31mTest FAILED:\x1b[0m sync of msgs in folder ".$folder->{name}." failed \n";
+                            print "\x1b[31mTest FAILED:\x1b[0m sync of msgs in folder ".$folder->{name}." failed, (check: result->{$option}, folder: $matched_folder)\n";
                             return -1;
                         }
                     }
@@ -712,7 +713,7 @@ sub check_rimap_status {
                     if ($fld eq "sent" or $fld eq "drafts" or $fld eq "spam" or $fld eq "trash" or $fld eq "inbox") {$found = 1;}
                 }
                 unless ($found) {
-                    print "\x1b[31mTest FAILED:\x1b[0m  folder ".$fld->{name}." rimap folder is absent!\n";
+                    print "\x1b[31mTest FAILED:\x1b[0m  folder ".$fld->{name}." rimap folder is absent! (check: result->{$option}, folder: $matched_folder)\n";
                     return -1;
                 }
             }
@@ -720,7 +721,7 @@ sub check_rimap_status {
                 foreach my $folder (@{$folders}) {
                     if ($folder eq "sent" or $folder eq "drafts" or $folder eq "spam" or $folder eq "trash" or $folder eq "inbox") {next;}
                     if ($folder->{name} =~  /^\d+$matched_folder$/) {
-                        print "\x1b[31mTest FAILED:\x1b[0m  folder ".$folder->{name}." should have been deleted during sync\n";
+                        print "\x1b[31mTest FAILED:\x1b[0m  folder ".$folder->{name}." should have been deleted during sync, (check: result->{$option}, folder: ".$folder->{name}.")\n";
                         return -1;
                     }
                 }
@@ -849,22 +850,30 @@ foreach my $test_file (@files) {
                     "--config=".$parsed_args{"imap_config"}: '--config=config.conf').
                     "  --test=".$test_file;
     system($cmd);
-    sleep(1);
+    my $ping_retries = ($parsed_args{"ping_retries"} ? $parsed_args{"ping_retries"}: 5);
 
-    my $a = `ps waux | grep fake | grep /usr/bin/perl | grep -v ps`;
-    print $a;
-    my @ar = split (/\s+/,$a);
-    my $fs_pid;
-    my $fh = IO::File->new("< $pid_file");
-    if (defined $fh) {
-        $fs_pid = <$fh>;
-        chomp $fs_pid;
-        $fh->close();
+    my $connected = 0;
+    for (my $j = 0; $j < $ping_retries; ++$j) {
+        $| = 1;
+
+        my $socket = new IO::Socket::INET (
+                            PeerHost => $parsed_args{"host"},
+                            PeerPort => $parsed_args{"port"},
+                            Proto => 'tcp',
+                        );
+        if ($socket) {
+            my $response = "";
+            $socket->recv($response, 1024);
+            if ($response =~ /OK Welcome to Fake Imap Server/) {
+                print "Connected to Fake Imap Server: $response\n";
+                $connected = 1;
+                $socket->close();
+                last;
+            }
+            $socket->close();
+        }
     }
-    if(scalar(@ar) > 0 and $ar[1] eq $fs_pid ) {
-        warn "Fake Imap Server started successfully";
-    }
-    else {
+    if ($connected <= 0) {
         print "Something wrong with Fake Imap Server \n";
         exit;
     }

@@ -220,9 +220,6 @@ sub process_request {
             if ($self->check_bad_commands($bad_commands)) {last;}
             next;
         }
-        #$self->{selected_folder} = "Inbox";
-        #$line = "A003 STORE 1:* -FLAGS (\\Deleted)";
-        #$line = "A003 LOGOUT";
         $self->{logger}->debug("<<<: $line");
 
         if ($line =~ /login/i) {
