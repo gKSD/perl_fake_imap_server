@@ -1,5 +1,6 @@
 #!/usr/bin/perl -I/usr/local/mpop/lib/
 
+use strict;
 use IO::File;
 use Switch;
 use Data::Dumper;
@@ -14,9 +15,8 @@ use mPOP::MescFolders();
 
 sub print_help {
     print "Usage:\n";
-    print "  obligatory: \n";
     print "    --test [-t] =</dir/test_file>\n";
-    print "  optional: \n";
+    print "    --test_dir [-d] =<dir>\n";
     print "    --imap_config [-c] =</dir/config_file>\n";
     print "    --help [-h]\n";
     print "\nCollector params (for rpop.imap table):\n";
@@ -56,12 +56,16 @@ if (defined $args) {
             if (my @fields = $args =~ /^\-\-(\w+)\=([\w\.\/@]+)$/g) {
                 $parsed_args{$fields[0]} = $fields[1];
             }
+            elsif (my @fields = $args =~ /^\-\-(\w+)\=\"\s*([\w\.\/@\-\= ]*)\"\s*$/g) {
+                $parsed_args{$fields[0]} = $fields[1];
+            }
             elsif ($args =~ /^\-[hplcts]$/g) {
                 my $param = $args;
-                if(defined ($_ = shift @ARGV) and (m/^([\w\.\/]+)$/)) {
+                if(defined ($_ = shift @ARGV) and (m/^([\w\.\/@]+)$/)) {
                     switch ($param) {
                         case '-t' { $param = 'test' }
                         case '-c' { $param = 'imap_config' }
+                        case '-d' { $param = 'test_dir' }
                     }
                     $parsed_args{$param} = $_;
                 }
@@ -75,12 +79,6 @@ if (defined $args) {
             $args = shift @ARGV;
         }
     }
-}
-
-unless ($parsed_args{"test"}) {
-    print "option --test [-t] is obligatory\n";
-    print_help();
-    exit;
 }
 
 sub parse_imap_config {
@@ -97,7 +95,7 @@ sub parse_imap_config {
     while (my $line = <$fh>) {
         chomp $line;
         $do_add = 1;
-        if ($line =~ /^\s*(\w+)\s+\"?([\w\.\/\@]*)\"?\s*$/) {
+        if ($line =~ /^\s*(\w+)\s+\"?([\w\.\/\@ \-\=]*)\"?\s*$/) {
             #my $key = lc $1;
             my $key = $1;
             my $value = $2;
@@ -314,7 +312,7 @@ sub do_parse {
 sub parse_test_file {
     my $test_file = shift;
     my $result = shift;
-    my $test_counter = shift;
+    my $tests = shift;
     my $fh = new IO::File;
     unless ($fh->open("$test_file")) {
         die "file($test_file) with imap tests not found\n";
@@ -329,9 +327,12 @@ sub parse_test_file {
             $fh->close();
             return -1;
         } else {
-            my @ar = @{$glhash{test}};
-            $$test_counter = $#ar + 1;
-            %{$result} = %{$glhash{result}};
+            if ($glhash{result}){
+                %{$result} = %{$glhash{result}};
+            }
+            if ($glhash{test}) {
+                @{$tests} = @{$glhash{test}};
+            }
         }
     };
     if ($@) {
@@ -539,9 +540,9 @@ sub get_initial_rimap_state {
 }
 
 sub compare_msgs_in_fld {
-    my ($msgs, $res_msgs, $mesc, $args) = @_;
+    my ($msgs, $res_msgs, $args) = @_;
     my $fh = new IO::File;
-    my $msg_file = ($args->{"message"} ? $args->{"message"}:message.eml);
+    my $msg_file = ($args->{"message"} ? $args->{"message"}: "message.eml");
     my $msg_to = "";
     my $msg_from = "";
     my $msg_body = "";
@@ -573,13 +574,13 @@ sub compare_msgs_in_fld {
         $msg_body = "This is just fake message For tests";
     }
 
-    foreach my $msg (@{$msgs}) {
+    foreach my $uid (keys %{$res_msgs}) {
         my $found = 0;
-        foreach my $uid (keys %{$res_msgs}) {
+        foreach my $msg (@{$msgs}) {
             if ($msg->{uidl} =~ /$uid$/) {
                 unless ($msg->{microformat} =~ /$msg_body/ and
                     $msg->{to} eq $msg_to and $msg->{from} eq $msg_from) {
-                    warn "Test FAILED: msgs in folders mismatch! (or check your test file)";
+                    print "Error: msgs in folders mismatch! (or check your test file)\n";
                     return -1;
                 }
                 $found = 1;
@@ -587,7 +588,7 @@ sub compare_msgs_in_fld {
             }
         }
         unless ($found) {
-            warn "Test FAILED: msgs in folders mismatch! (or check your test file)";
+            print "Error: msgs in folders mismatch! (or check your test file)\n";
             return -1;
         }
     }
@@ -601,6 +602,7 @@ sub check_rimap_status {
     $mesc->ClearFoldersCache;
     my $folders = $mesc->GetFolders;
     my %fuids = ();
+    my $folder_id = $args->{"Folder"};
     unless ($result->{$option}) {
         warn "Error: result test part \"$option\" is not defined in test file";
         return -1;
@@ -622,7 +624,6 @@ sub check_rimap_status {
     }
 
     if ($mode eq "fetch") {
-        my $new_folders = [];
         my $res_folder = "";
         foreach my $folder (@{$folders}) {
             my $found = 0;
@@ -632,10 +633,15 @@ sub check_rimap_status {
             }
             else {
                 foreach my $key (keys %{$result->{$option}}) {
-                    if ($folder->{name} =~ /$key$/) {
-                        $found = 1;
-                        $res_folder = $key;
-                        last;
+                    if ($folder_id eq "0") {
+                        if ($folder->{name} =~ /^$key$/) {$found = 1;}
+                    }
+                    elsif ($folder->{name} =~ /(.*)$key$/) {
+                        if ($1 =~ /$folder_id/) {
+                            $found = 1;
+                            $res_folder = $key;
+                            last;
+                        }
                     }
                 }
             }
@@ -654,8 +660,8 @@ sub check_rimap_status {
                         push @{$new_msgs}, $msg;
                     }
                 }
-                if (compare_msgs_in_fld($new_msgs, $result->{$option}->{$res_folder}->{uids}, $mesc, $args) <= 0) {
-                    warn "Test FAILED: msg fetch error";
+                if (compare_msgs_in_fld($new_msgs, $result->{$option}->{$res_folder}->{uids}, $args) <= 0) {
+                    print "\x1b[31mTest FAILED:\x1b[0m  msg fetch error\n";
                     return -1;
                 }
             }
@@ -664,7 +670,6 @@ sub check_rimap_status {
     else {
         foreach my $matched_folder (@{$matched_folders}) {
             my $found = 0;
-            my $is_rimap_inbox = 0;
             my $cur_res_folder = "";
             if ($matched_folder eq $rimap_inbox and length($res_inbox) > 0) {
                 $cur_res_folder = $res_inbox;
@@ -672,8 +677,19 @@ sub check_rimap_status {
             }
             else {
                 foreach my $res_folder (keys %{$result->{$option}}) {
-                    if ($matched_folder =~ /$res_folder$/) {
-                        $found = 1;
+                    foreach my $flag (@{$result->{$option}->{$res_folder}->{flags}}) {
+                        if (lc $flag eq "sent" and $matched_folder eq "sent" or lc $flag eq "drafts" and $matched_folder eq "drafts" or lc $flag eq "spam" and $matched_folder eq "spam" or lc $flag eq "trash" and $matched_folder eq "trash") {
+                            $found = 1;
+                            last;
+                        }
+                    }
+                    if ($folder_id eq "0") {
+                        if ($matched_folder =~ /^$res_folder$/) {$found = 1;}
+                    }
+                    elsif ($matched_folder =~ /(.*)$res_folder$/) {
+                        if ($1 =~ /$folder_id/) {$found = 1;}
+                    }
+                    if ($found) {
                         $cur_res_folder = $res_folder;
                         last;
                     }
@@ -681,50 +697,95 @@ sub check_rimap_status {
             }
 
             if ($found) {
-                foreach $folder (@{$folders}) {
+                $found = 0;
+                my $fld;
+                foreach my $folder (@{$folders}) {
+                    $fld = $folder->{name};
                     if ($folder->{name} eq $matched_folder) {
-                        if (compare_msgs_in_fld($mesc->GetFolderMessages($folder->{id}), $result->{$option}->{$cur_res_folder}->{uids}, $mesc, $args) <= 0) {
-                            warn "Test FAILED: sync of msgs in folder ".$folder->{name}." failed ";
+                        $found = 1;
+                        if (compare_msgs_in_fld($mesc->GetFolderMessages($folder->{id}), $result->{$option}->{$cur_res_folder}->{uids}, $args) <= 0) {
+                            print "\x1b[31mTest FAILED:\x1b[0m sync of msgs in folder ".$folder->{name}." failed \n";
                             return -1;
                         }
                     }
+                    #системные папки игнорируются
+                    if ($fld eq "sent" or $fld eq "drafts" or $fld eq "spam" or $fld eq "trash" or $fld eq "inbox") {$found = 1;}
+                }
+                unless ($found) {
+                    print "\x1b[31mTest FAILED:\x1b[0m  folder ".$fld->{name}." rimap folder is absent!\n";
+                    return -1;
                 }
             }
             else {
-                if ($is_rimap_inbox) {
-                    warn "Test FAILED: folder ".$folder->{name}." rimap folder is absent!";
-                    return -1;
-                }
-                foreach $folder (@{$folders}) {
+                foreach my $folder (@{$folders}) {
+                    if ($folder eq "sent" or $folder eq "drafts" or $folder eq "spam" or $folder eq "trash" or $folder eq "inbox") {next;}
                     if ($folder->{name} =~  /^\d+$matched_folder$/) {
-                        warn "Test FAILED: folder ".$folder->{name}." should have been deleted during sync";
+                        print "\x1b[31mTest FAILED:\x1b[0m  folder ".$folder->{name}." should have been deleted during sync\n";
                         return -1;
                     }
                 }
             }
         }
     }
-    my $msgs = $mesc->GetFolderMessages(0);
+    return 1;
 }
 
 sub get_folders {
     my $matched_folders = shift;
+    my $current_test = shift;
     my $args = shift;
     my $pUser = mPOP::Get()->GetUserFromID($args->{"UserID"});
     my $mesc = $pUser->GetPMescalito;
     $mesc->ClearFoldersCache;
     my $folders = $mesc->GetFolders;
+    my $folder_id = $args->{"Folder"};
 
     my $old_length = scalar(@{$matched_folders});
+    my $found;
     foreach my $folder (@{$folders}) {
-        if ($old_length == 0) {
+        $found = 0;
+        if ($folder->{name} ~~ $matched_folders) {next;}
+        if ($folder_id == $folder->{id}) {
             push @{$matched_folders}, $folder->{name};
+            next;
         }
-        else {
-            unless ($folder->{name} ~~ $matched_folders) {
-                push @{$matched_folders}, $folder->{name};
+        foreach my $res_folder (keys %{$current_test}) {
+            if ($folder->{name} eq "sent" or $folder->{name} eq "drafts" or $folder->{name} eq "spam" or $folder->{name} eq "trash" or $folder->{name} eq "inbox") {
+
+                foreach my $flag (@{$current_test->{$res_folder}->{flags}}) {
+                    if (lc $flag eq "sent" and $folder->{name} eq "sent" or lc $flag eq "drafts" and $folder->{name} eq "drafts" or lc $flag eq "spam" and $folder->{name} eq "spam" or lc $flag eq "trash" and $folder->{name} eq "trash")
+                    {$found = 1; last;}
+                }
+            }
+            elsif ($folder_id == 0) {
+                if ($folder->{name} =~ /^$res_folder$/) {$found = 1; last;}
+            }
+            else {
+                my $regex = ''.$folder_id.$res_folder;
+                my $name = ''.$folder->{name};
+                use Data::Dumper;
+                if ($name =~ /(.*)$res_folder$/) {
+                    if ($1 =~ /$folder_id/) {
+                        $found = 1;
+                        last;
+                    }
+                }
             }
         }
+        if ($found) {
+            push @{$matched_folders}, $folder->{name};
+        }
+    }
+}
+
+sub check_for_extra_fake_imap_server {
+    #check if another Fake Imap Server is working, and stopping it
+    my $a = `ps waux | grep fake | grep /usr/bin/perl | grep -v ps`;
+    print $a;
+    my @ar = split (/\s+/,$a);
+    unless (scalar(@ar) == 0) {
+        print "kill PID: ".$ar[1]."\n";
+        kill 9, $ar[1];
     }
 }
 
@@ -732,79 +793,137 @@ sub my_exit {
     my ($db, $collector_id, $config) = @_;
     delete_collector($db, $collector_id);
 
-    my $pid_file = ($config->{pid_file} ? $config->{pid_file}: "/tmp/server.pid");
+    my $pid_file = ($config->{pid_file} ? $config->{pid_file}: "/tmp/fake_imap_server.pid");
     my $fh = IO::File->new("< $pid_file");
     if (defined $fh) {
         my $line = <$fh>;
         chomp $line;
         print "kill PID: $line\n";
         kill 9, $line;
+        $fh->close();
     }
-    $fh->close();
 }
 
-
-my %test_result;
-my $tests_amount = 0;
-my $check_all = 0; #flag
-my $link_to_tests_amount = \$tests_amount;
+check_for_extra_fake_imap_server();
 my $db = run_connect($parsed_args{'mysql_host'}, 'mysql', $parsed_args{'mysql_user'}, $parsed_args{'mysql_password'});
 parse_imap_config(($parsed_args{"imap_config"}? $parsed_args{"imap_config"}: 'config.conf'),\%parsed_args);
-
 check_collector_params($db,\%parsed_args);
-
-my $collector_id = create_collector($db, $parsed_args{"UserID"}, $parsed_args{"UserEmail"},
-                                    $parsed_args{"Host"}, $parsed_args{"User"}, $parsed_args{"Password"},
-                                    $parsed_args{"EncPassword"},$parsed_args{"Flags"},$parsed_args{"WaitTime"},
-                                    $parsed_args{"Folder"}, $parsed_args{"KeepTime"}, $parsed_args{"Time"},
-                                    $parsed_args{"LastTime"}, $parsed_args{"LastMsg"}, $parsed_args{"LastOK"},
-                                    $parsed_args{"Port"}, $parsed_args{"ConnectionMode"},$parsed_args{"Email"},
-                                    $parsed_args{"AutoConfigure"}, $parsed_args{"ContactFetchRetries"},
-                                    $parsed_args{"OldTreshold"});
-select_from_db_table_by_UserEmail($db, 'ksd001@mail.ru');
-
-if (defined $parsed_args{"test"}) {
-    parse_test_file($parsed_args{"test"}, \%test_result, $link_to_tests_amount);
-    my $cmd = "./fake_imap_server.pm run  ".(defined $parsed_args{"imap_config"}?
-                    "--config=".$parsed_args{"imap_config"}: '--config=config.conf').
-                    "  --test=".$parsed_args{"test"};
-    system($cmd);
-}
-else {
-    my_exit($db, $collector_id);
-    die "file with test is undefined\n";
-}
-
-my %old_uids_by_fld = ();
-my @old_flds = ();
-my @matched_folders = ();
-my $mode = ($parsed_args{"Flags"} & 1<<9 ? "sync": "fetch");
-my $test_failed = 0;
-get_folders(\@matched_folders, \%parsed_args);
-if ($mode eq "fetch") {get_initial_rimap_state (\@old_flds, \%old_uids_by_fld, \@matched_folders, \%parsed_args);}
-
-for (my $i = 0; $i < $tests_amount; $i++) {
-    $cmd = "../BUILD/collector --proto=imap --fetch-id=$collector_id --log=imap -l 5";
-    system($cmd);
-
-    get_folders(\@matched_folders, \%parsed_args);
-    if ($test_result{$i + 1}) {
-        if (check_rimap_status(\%test_result, \@old_flds, \%old_uids_by_fld,$i + 1, $mode, \@matched_folders, \%parsed_args) <= 0) {
-            $test_failed = 1;
-            last;
-        };
-        if ($mode eq "fetch") {get_initial_rimap_state (\@old_flds, \%old_uids_by_fld,\@matched_folders, \%parsed_args);}
-    }
-}
-if ($test_failed) {
-    my_exit($db, $collector_id, \%imap_config);
+if (!$parsed_args{"test"} and !$parsed_args{"test_dir"}) {
+    print "Test files not found!";
     exit;
 }
-get_folders(\@matched_folders, \%parsed_args);
-eval {
-    check_rimap_status(\%test_result, \@old_flds, \%old_uids_by_fld, "total", $mode, \@matched_folders,\%parsed_args);
-};
-if ($@) {}
-my_exit($db, $collector_id, \%imap_config);
 
+my @files = ();
+if ($parsed_args{"test"}) {
+    if (open(FH, "< ".$parsed_args{"test"})) {
+        close(FH);
+        push @files, $parsed_args{"test"};
+    }
+    else {
+        print "Error: single test does not exist\n";
+        exit;
+    }
+}
+else {
+    opendir DIR, $parsed_args{"test_dir"} or die $!;
+    while(my $fname = readdir DIR) {
+        if ($fname =~ /^test/) { push @files, $parsed_args{"test_dir"}."/".$fname; }
+    }
+    closedir DIR;
+}
+
+my $test_failed = 0;
+my $test_passed = 0;
+my $test_files = $#files + 1;
+my @failed_files = ();
+
+foreach my $test_file (@files) {
+    my %test_result = ();
+    my @tests = ();
+    my $tests_amount = 0;
+    my $pid_file = ($parsed_args{"pid_file"} ? $parsed_args{"pid_file"}: "/tmp/fake_imap_server.pid");
+
+    parse_test_file($test_file, \%test_result, \@tests);
+    $tests_amount = $#tests + 1;
+    my $cmd = "./fake_imap_server.pm run  ".(defined $parsed_args{"imap_config"}?
+                    "--config=".$parsed_args{"imap_config"}: '--config=config.conf').
+                    "  --test=".$test_file;
+    system($cmd);
+    sleep(1);
+
+    my $a = `ps waux | grep fake | grep /usr/bin/perl | grep -v ps`;
+    print $a;
+    my @ar = split (/\s+/,$a);
+    my $fs_pid;
+    my $fh = IO::File->new("< $pid_file");
+    if (defined $fh) {
+        $fs_pid = <$fh>;
+        chomp $fs_pid;
+        $fh->close();
+    }
+    if(scalar(@ar) > 0 and $ar[1] eq $fs_pid ) {
+        warn "Fake Imap Server started successfully";
+    }
+    else {
+        print "Something wrong with Fake Imap Server \n";
+        exit;
+    }
+
+    my $collector_id = create_collector($db, $parsed_args{"UserID"}, $parsed_args{"UserEmail"},
+                                        $parsed_args{"Host"}, $parsed_args{"User"}, $parsed_args{"Password"},
+                                        $parsed_args{"EncPassword"},$parsed_args{"Flags"},$parsed_args{"WaitTime"},
+                                        $parsed_args{"Folder"}, $parsed_args{"KeepTime"}, $parsed_args{"Time"},
+                                        $parsed_args{"LastTime"}, $parsed_args{"LastMsg"}, $parsed_args{"LastOK"},
+                                        $parsed_args{"Port"}, $parsed_args{"ConnectionMode"},$parsed_args{"Email"},
+                                        $parsed_args{"AutoConfigure"}, $parsed_args{"ContactFetchRetries"},
+                                        $parsed_args{"OldTreshold"});
+    select_from_db_table_by_UserEmail($db, 'ksd001@mail.ru');
+
+    my %old_uids_by_fld = ();
+    my @old_flds = ();
+    my @matched_folders = ();
+    my $mode = ($parsed_args{"Flags"} & 1<<9 ? "sync": "fetch");
+    my $is_test_failed = 0;
+    if ($mode eq "fetch") {get_initial_rimap_state (\@old_flds, \%old_uids_by_fld, \@matched_folders, \%parsed_args);}
+
+    for (my $i = 0; $i < $tests_amount; $i++) {
+        my $cmd = "";
+        if ($parsed_args{"exec"}) {$cmd = $parsed_args{"exec"}." --fetch-id=$collector_id";}
+        else {$cmd = "../BUILD/collector --proto=imap --fetch-id=$collector_id --log=imap -l 5";}
+        system($cmd);
+
+        get_folders(\@matched_folders, $tests[$i], \%parsed_args);
+        if ($test_result{$i + 1}) {
+            if (check_rimap_status(\%test_result, \@old_flds, \%old_uids_by_fld, $i + 1, $mode, \@matched_folders, \%parsed_args) <= 0) {
+                $is_test_failed = 1;
+                last;
+            };
+            if ($mode eq "fetch") {get_initial_rimap_state (\@old_flds, \%old_uids_by_fld,\@matched_folders, \%parsed_args);}
+        }
+    }
+    if ($is_test_failed) {
+        my_exit($db, $collector_id, \%parsed_args);
+        $test_failed++;
+        push @failed_files, $test_file;
+        next;
+    }
+    if(check_rimap_status(\%test_result, \@old_flds, \%old_uids_by_fld, "total", $mode, \@matched_folders,\%parsed_args) <= 0) {
+        $test_failed++;
+        push @failed_files, $test_file;
+    }
+    else {$test_passed++;}
+    my_exit($db, $collector_id, \%parsed_args);
+}
+if ($test_passed == $test_files) {
+    print "\x1b[32mAll tests passed successfully: $test_files/$test_files\x1b[0m \n";
+    print "Result PASS\n";
+}
+if ($test_failed) {
+    print "\x1b[31mFailed test: $test_failed/$test_files\x1b[0m \n";
+    print "\x1b[31mFailed tests: \x1b[0m \n";
+    foreach my $failed_file (@failed_files) {
+        print "\x1b[31m    $failed_file\x1b[0m \n";
+    }
+    print "Result FAIL\n";
+}
 1;

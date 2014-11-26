@@ -38,12 +38,15 @@ if(defined $argument) {
     if ($argument eq 'run') {
         my %data;
         while (defined ($argument = shift @ARGV)) {
-            if (my @fields = $argument =~ /^\-\-(\w+)\=([\w\.\/]+)$/g) {
+            if (my @fields = $argument =~ /^\-\-(\w+)\=([\w\.\/@]+)$/g) {
+                $data{$fields[0]} = $fields[1];
+            }
+            elsif (@fields = $argument =~ /^\-\-(\w+)\=\"\s*([\w\.\/@\-\= ]*)\"\s*$/g) {
                 $data{$fields[0]} = $fields[1];
             }
             elsif ($argument =~ /^\-[hplcts]$/g) {
                 my $param = $argument;
-                if(defined ($_ = shift @ARGV) and (m/^([\w\.\/]+)$/)){
+                if(defined ($_ = shift @ARGV) and (m/^([\w\.\/@]+)$/)){
                         switch ($param) {
                             case '-h' { $param = 'host' }
                             case '-p' { $param = 'port' }
@@ -134,13 +137,14 @@ sub init
         $self->{init_params}->{"mode"} = "";
     }
 
-    if (defined $self->{init_params}->{pid_file} ) {
-        my $file = $self->{init_params}->{pid_file};
-        my $fh = IO::File->new("> $file");
-        if (defined $fh) {
-            print $fh "$$\n";
-            $fh->close;
-        }
+    my $file = "/tmp/fake_imap_server.pid";
+    if ($self->{init_params}->{pid_file}) {
+        $file = $self->{init_params}->{pid_file};
+    }
+    my $fh = IO::File->new("> $file");
+    if (defined $fh) {
+        print $fh "$$\n";
+        $fh->close;
     }
     #warn "fake imap dumper: ".Dumper($self)."\n";
 }
@@ -1438,11 +1442,11 @@ sub check_test_file_structure {
                 return -1;
             }
             foreach my $key1 (keys %{$key}) {
-                unless (ref($key->{$key}) eq "HASH") {
+                unless (ref($key->{$key1}) eq "HASH") {
                     $self->{logger}->warn("each test in test array must be a hash");
                     return -1;
                 }
-                unless (ref($key->{$key}->{uids}) eq "HASH") {
+                unless (ref($key->{$key1}->{uids}) eq "HASH") {
                     $self->{logger}->warn("uids in test part must be hashes");
                     return -1;
                 }
@@ -1709,7 +1713,7 @@ sub parse_config
     while (my $line = <$fh>) {
         chomp $line;
         $do_add = 1;
-        if ($line =~ /^\s*(\w+)\s+\"?([\w\.\/\@]*)\"?\s*$/) {
+        if ($line =~ /^\s*(\w+)\s+\"?([\w\.\/\@ \-\=]*)\"?\s*$/) {
             my $key = lc $1;
             my $value = $2;
             $self->{init_params}{$key} = $value;

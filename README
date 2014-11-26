@@ -1,0 +1,78 @@
+Perl dependencies
+---------------------
+   Log::Log4perl
+   IO::File
+   Switch
+   Time::HiRes 
+
+Run tests
+---------------------
+    ./run.pl [params]
+
+Run Fake Imap Server:
+---------------------
+    ./fake_imap_server.pm run [params]
+
+
+Config.conf
+---------------------
+for run.pl and for Fake Imap Server
+
+log_file  - for Fake Imap Server logs (for Log::Log4perl)
+log_level - different log levels (for Log::Log4perl)
+
+pid_file  - file with Fake Imap Server PID
+
+
+host      - host to run Fake Imap Server
+port      - port to run Fake Imap Server
+
+test      - path to file with test
+test_dir  - path to directory with file test (ONLY FOR run.pl)
+
+message   - fake message for IMAP FETCH command answer
+mode      - config mode for Fake Imap Server on (if not specified Server answers with hardcode answers)
+config    - separate config for Fake Imap Server
+
+exec      - path to collector binary
+
+Collector params: (ONLY FOR run.pl)
+    UserEmail           - local email (real email for db table mPOP.user)
+    Password            - random string (fake)
+    Email               - random string (fake)
+    UserID              - local user ID (real email for db table mPOP.user)
+    Email               - random string
+    Host                - remote host (Fake Imap Server host)
+    User                - random sting
+    Flags               - collector flags
+    Folder              - folder id for collector (default 0)
+    Port                - remote port (Fake Imap Server port)
+    ConnectionMode      - no-ssl/ssl
+    AutoConfigure       - yes/no (default no)
+    ContactFetchRetries - number of retries
+
+Mysql db params: (ONLY FOR run.pl)
+    mysql_host
+    mysql user
+    mysql_password
+
+Command line params
+---------------------
+the same with config file params
+
+Test File Structure
+---------------------
+imap   - hash of arrays
+         fixed response on each specified command.
+         It has the highest priority. So, if answer for a command is specified here, than it will send as an
+         answer.
+test   - array of hashes
+         Each hash - is a single run of collector, containing FolderNames and their properties (in lower case)
+            uids        - hash of arrays
+                          Example: {UID1 [ <array of uid flags> ], UID2 [ <array of uid flags> ], ...}
+            flags       - arrays of folder flags
+            uidvalidity - folders uidvalidity
+result - hash of hashes - tests to be checked
+         State "total" - check the result state of collector after all tests from test file passed. !OBLIGATORY
+         State specified with number (1 {}, 2{}, ...) - number of test which should be checked right after
+         passing. (OPTIONAL)
