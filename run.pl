@@ -100,7 +100,9 @@ sub parse_imap_config {
             #my $key = lc $1;
             my $key = $1;
             my $value = $2;
-            $result->{$key} = $value;
+            unless (exists $result->{$key}) {
+                $result->{$key} = $value;
+            }
         }
     }
     $fh->close;
@@ -420,7 +422,7 @@ sub check_collector_params {
         $params->{"ContactFetchRetries"} = 0;
     }
     unless (exists($params->{"Folder"})) {
-        $params->{"Folder"} = "1";
+        $params->{"Folder"} = "0";
     }
 }
 
@@ -476,6 +478,20 @@ sub create_collector {
     $sth->finish();
     return $sth->{mysql_insertid};
 }
+
+sub clear_msg_table {
+#just DELETE rows from rpop.imap_msg
+
+    my $db = shift;
+    my $CollectorId = shift;
+
+    my $sth = $db->prepare("DELETE FROM rpop.imap_msg WHERE  CollectorId=?");
+    $sth->execute($CollectorId) or die $DBI::errstr;
+    print "Number of rows deleted: ".$sth->rows."\n";
+    $sth->finish();
+}
+
+
 
 sub delete_collector {
 #just DELETE from rpop.imap
@@ -793,6 +809,7 @@ sub check_for_extra_fake_imap_server {
 sub my_exit {
     my ($db, $collector_id, $config) = @_;
     delete_collector($db, $collector_id);
+    clear_msg_table($db, $collector_id);
 
     my $pid_file = ($config->{pid_file} ? $config->{pid_file}: "/tmp/fake_imap_server.pid");
     my $fh = IO::File->new("< $pid_file");
@@ -803,6 +820,7 @@ sub my_exit {
         kill 9, $line;
         $fh->close();
     }
+        unlink "connect.txt";
 }
 
 check_for_extra_fake_imap_server();
@@ -832,11 +850,12 @@ else {
     }
     closedir DIR;
 }
-
 my $test_failed = 0;
 my $test_passed = 0;
 my $test_files = $#files + 1;
 my @failed_files = ();
+my $run_pl_path = (($0 =~ /(.*)run\.pl$/)? $1: "");
+$run_pl_path =~ s/\.\///;
 
 foreach my $test_file (@files) {
     my %test_result = ();
@@ -846,8 +865,8 @@ foreach my $test_file (@files) {
 
     parse_test_file($test_file, \%test_result, \@tests);
     $tests_amount = $#tests + 1;
-    my $cmd = "./fake_imap_server.pm run  ".(defined $parsed_args{"imap_config"}?
-                    "--config=".$parsed_args{"imap_config"}: '--config=config.conf').
+    my $cmd = ($parsed_args{"fake_imap_server_exec"}? $parsed_args{"fake_imap_server_exec"}: "./$run_pl_path/fake_imap_server.pm")."  run  ".
+                    (defined $parsed_args{"imap_config"}? "--config=".$parsed_args{"imap_config"}: "--config=./$run_pl_path/config.conf").
                     "  --test=".$test_file;
     system($cmd);
     my $ping_retries = ($parsed_args{"ping_retries"} ? $parsed_args{"ping_retries"}: 5);
@@ -866,6 +885,7 @@ foreach my $test_file (@files) {
             $socket->recv($response, 1024);
             if ($response =~ /OK Welcome to Fake Imap Server/) {
                 print "Connected to Fake Imap Server: $response\n";
+                $socket->send("ping");
                 $connected = 1;
                 $socket->close();
                 last;
@@ -896,6 +916,8 @@ foreach my $test_file (@files) {
     if ($mode eq "fetch") {get_initial_rimap_state (\@old_flds, \%old_uids_by_fld, \@matched_folders, \%parsed_args);}
 
     for (my $i = 0; $i < $tests_amount; $i++) {
+
+        print "\x1b[35mStart test $test_file [$i]\x1b[0m \n";
         my $cmd = "";
         if ($parsed_args{"exec"}) {$cmd = $parsed_args{"exec"}." --fetch-id=$collector_id";}
         else {$cmd = "../BUILD/collector --proto=imap --fetch-id=$collector_id --log=imap -l 5";}

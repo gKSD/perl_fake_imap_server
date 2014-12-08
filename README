@@ -16,7 +16,9 @@ Run Fake Imap Server:
 
 Config.conf
 ---------------------
-for run.pl and for Fake Imap Server
+(for run.pl and for Fake Imap Server)
+
+fake_imap_server_exec - path to fake imap server exec (without any params)
 
 log_file  - for Fake Imap Server logs (for Log::Log4perl)
 log_level - different log levels (for Log::Log4perl)

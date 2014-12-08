@@ -146,6 +146,14 @@ sub init
         print $fh "$$\n";
         $fh->close;
     }
+
+    $fh = IO::File->new("> connect.txt");
+    if (defined $fh) {
+        print $fh "0\n";
+        $fh->close;
+    }
+
+    $self->{logger}->warn(Dumper($self));
     #warn "fake imap dumper: ".Dumper($self)."\n";
 }
 
@@ -171,10 +179,20 @@ sub run {
     {
         $SIG{CHLD} = 'IGNORE';
         my $pid;
-        $self->{connection_number}++;
+
+        my $fh = IO::File->new("< connect.txt");
+        if (defined $fh) {
+            my $line = <$fh>;
+            chomp $line;
+            $self->{connection_number} = $line;
+            $fh->close;
+        }else {$self->{connection_number} = 0;}
+        #$self->{connection_number}++;
         if ($self->{connection_number} >= $self->{test_amount}) {
+            print "\x1b[31mConnection amount exceeded!!!\x1b[0m \n";
             close $self->{client};
         }
+
         while (not defined ($pid = fork()))
         {
             sleep 5;
@@ -195,18 +213,38 @@ sub run {
 sub process_request {
     my $self = shift;
     my $client = $self->{client};
+    $self->{logger}->warn("CONNECTION NUMBER =>".$self->{connection_number});
     my $mode = 0;
     if ($self->{init_params}) {
         $mode = ($self->{init_params}->{"mode"} eq "config" ? 1: 0);
     }
     my $cmd_num;
-    my $bad_commands = 0;;
+    my $bad_commands = 0;
+    my $is_first = 1;
     $self->{state} = 0;
     $self->{logger}->info("client connected to pid $$");
     print $client "* OK Welcome to Fake Imap Server\r\n";
 
     while(my $line = <$client>) {
         chomp $line;
+        if ($is_first) {
+            if($line =~ /^ping$/i) {
+                $self->notagged_send("OK Fake Imap Server is working hard");
+                $self->{logger}->debug(">>>: OK Fake Imap Server is working hard");
+                close $client;
+                last;
+            }
+            else {
+                my $fh = IO::File->new("> connect.txt");
+                if (defined $fh) {
+                    my $line = $self->{connection_number} + 1;
+                    print $fh $line."\n";
+                    $fh->close;
+                }
+            }
+            $is_first = 0
+        }
+
         if ($line =~ /^\s*(\w+)\s/) {
             $cmd_num = $1;
             $bad_commands = 0;

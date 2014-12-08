@@ -1,0 +1,1232 @@
+2014/12/04 08:21:08 client connected to pid 2364
+2014/12/04 08:21:08 client connected to pid 2367
+2014/12/04 08:21:08 <<<: 1 LOGIN fake_remote_email@domain.com "123456"
+2014/12/04 08:21:08 >>>: * CAPABILITY IMAP ID XLIST UIDPLUS UNSELECT MOVE
+2014/12/04 08:21:08 >>>: OK Authentication successful
+2014/12/04 08:21:08 <<<: 2 CAPABILITY
+2014/12/04 08:21:08 >>>: * CAPABILITY FAKE IMAP
+2014/12/04 08:21:08 >>>: * CAPABILITY ID XLIST UIDPLUS UNSELECT MOVE
+2014/12/04 08:21:08 >>>: OK CAPABILITY completed
+2014/12/04 08:21:08 <<<: 3 XLIST "" "*"
+2014/12/04 08:21:08 >>>: * XLIST (\Inbox) "/" "INBOX"
+2014/12/04 08:21:08 >>>: 3 OK LIST completed
+2014/12/04 08:21:08 <<<: 4 STATUS "INBOX" (UIDNEXT MESSAGES UIDVALIDITY)
+2014/12/04 08:21:08 >>>: STATUS "INBOX" (MESSAGES 2 RECENT 0 UIDNEXT 4 UIDVALIDITY 13123)
+2014/12/04 08:21:08 >>>: 4 OK STATUS completed
+2014/12/04 08:21:08 <<<: 5 SELECT "INBOX"
+2014/12/04 08:21:09 >>>: FLAGS ()
+2014/12/04 08:21:09 >>>: OK [PERMANENTFLAGS] ()
+2014/12/04 08:21:09 >>>: 2 EXISTS
+2014/12/04 08:21:09 >>>: 0 RECENT
+2014/12/04 08:21:09 >>>: OK [UNSEEN 0]
+2014/12/04 08:21:09 >>>: OK [UIDVALIDITY 13123] UIDs valid
+2014/12/04 08:21:09 >>>: OK [UIDNEXT 4] Predicted next UID
+2014/12/04 08:21:09 >>>: 5 OK [READ-WRITE] SELECT completed
+2014/12/04 08:21:09 <<<: 6 UID FETCH 1:* (INTERNALDATE FLAGS)
+2014/12/04 08:21:09 123 fuid = 1, right = *, uid = 1, is_ok
+2014/12/04 08:21:09 >>>: 1 FETCH (UID 1 INTERNALDATE "09-Jul-2014 09:21:57 +0000" FLAGS (\seen \answered ))
+2014/12/04 08:21:09 123 fuid = 1, right = *, uid = 3, is_ok
+2014/12/04 08:21:09 >>>: 2 FETCH (UID 3 INTERNALDATE "09-Jul-2014 09:21:57 +0000" FLAGS (\seen \answered ))
+2014/12/04 08:21:09 >>>: 6 OK FETCH completed
+2014/12/04 08:21:09 <<<: 7 LOGOUT
+2014/12/04 08:21:09 client connected to pid 2373
+2014/12/04 08:21:09 client connected to pid 2376
+2014/12/04 08:21:09 <<<: 1 LOGIN fake_remote_email@domain.com "123456"
+2014/12/04 08:21:09 >>>: * CAPABILITY IMAP ID XLIST UIDPLUS UNSELECT MOVE
+2014/12/04 08:21:09 >>>: OK Authentication successful
+2014/12/04 08:21:09 <<<: 2 CAPABILITY
+2014/12/04 08:21:09 >>>: * CAPABILITY FAKE IMAP
+2014/12/04 08:21:09 >>>: * CAPABILITY ID XLIST UIDPLUS UNSELECT MOVE
+2014/12/04 08:21:09 >>>: OK CAPABILITY completed
+2014/12/04 08:21:09 <<<: 3 XLIST "" "*"
+2014/12/04 08:21:09 >>>: * XLIST () "/" "new_folder"
+2014/12/04 08:21:09 >>>: 3 OK LIST completed
+2014/12/04 08:21:09 <<<: 4 STATUS "new_folder" (UIDNEXT MESSAGES UIDVALIDITY)
+2014/12/04 08:21:09 >>>: STATUS "new_folder" (MESSAGES 1 RECENT 0 UIDNEXT 11 UIDVALIDITY 123456)
+2014/12/04 08:21:09 >>>: 4 OK STATUS completed
+2014/12/04 08:21:09 <<<: 5 SELECT "new_folder"
+2014/12/04 08:21:09 >>>: FLAGS ()
+2014/12/04 08:21:09 >>>: OK [PERMANENTFLAGS] ()
+2014/12/04 08:21:09 >>>: 1 EXISTS
+2014/12/04 08:21:09 >>>: 0 RECENT
+2014/12/04 08:21:09 >>>: OK [UNSEEN 1]
+2014/12/04 08:21:09 >>>: OK [UIDVALIDITY 123456] UIDs valid
+2014/12/04 08:21:09 >>>: OK [UIDNEXT 11] Predicted next UID
+2014/12/04 08:21:09 >>>: 5 OK [READ-WRITE] SELECT completed
+2014/12/04 08:21:09 <<<: 6 UID FETCH 1:* (INTERNALDATE FLAGS)
+2014/12/04 08:21:09 123 fuid = 1, right = *, uid = 10, is_ok
+2014/12/04 08:21:09 >>>: 1 FETCH (UID 10 INTERNALDATE "23-Aug-2013 00:00:33 +0000" FLAGS ())
+2014/12/04 08:21:09 >>>: 6 OK FETCH completed
+2014/12/04 08:21:09 <<<: 7 LOGOUT
+2014/12/04 08:21:09 client connected to pid 2379
+2014/12/04 08:25:34 client connected to pid 3205
+2014/12/04 08:25:34 client connected to pid 3208
+2014/12/04 08:25:34 <<<: 1 LOGIN fake_remote_email@domain.com "123456"
+2014/12/04 08:25:34 >>>: * CAPABILITY IMAP ID XLIST UIDPLUS UNSELECT MOVE
+2014/12/04 08:25:34 >>>: OK Authentication successful
+2014/12/04 08:25:34 <<<: 2 NAMESPACE
+2014/12/04 08:25:34 >>>: NAMESPACE (("INBOX." ".")) NIL NIL
+2014/12/04 08:25:34 >>>: 2 OK Namespace complited
+2014/12/04 08:25:34 <<<: 3 NAMESPACE
+2014/12/04 08:25:34 >>>: NAMESPACE (("INBOX." ".")) NIL NIL
+2014/12/04 08:25:34 >>>: 3 OK Namespace complited
+2014/12/04 08:25:34 <<<: 4 NAMESPACE
+2014/12/04 08:25:34 >>>: NAMESPACE (("INBOX." ".")) NIL NIL
+2014/12/04 08:25:34 >>>: 4 OK Namespace complited
+2014/12/04 08:25:34 <<<: 5 NAMESPACE
+2014/12/04 08:25:34 >>>: NAMESPACE (("INBOX." ".")) NIL NIL
+2014/12/04 08:25:34 >>>: 5 OK Namespace complited
+2014/12/04 08:25:35 <<<: 6 CAPABILITY
+2014/12/04 08:25:35 >>>: * CAPABILITY FAKE IMAP
+2014/12/04 08:25:35 >>>: * CAPABILITY ID XLIST UIDPLUS UNSELECT MOVE
+2014/12/04 08:25:35 >>>: OK CAPABILITY completed
+2014/12/04 08:25:35 <<<: 7 XLIST "" "*"
+2014/12/04 08:25:35 >>>: * XLIST (\Inbox) "/" "INBOX"
+2014/12/04 08:25:35 >>>: 7 OK LIST completed
+2014/12/04 08:25:35 <<<: 8 STATUS "INBOX" (UIDNEXT MESSAGES UIDVALIDITY)
+2014/12/04 08:25:35 >>>: STATUS "INBOX" (MESSAGES 2 RECENT 0 UIDNEXT 4 UIDVALIDITY 13123)
+2014/12/04 08:25:35 >>>: 8 OK STATUS completed
+2014/12/04 08:25:35 <<<: 9 SELECT "INBOX"
+2014/12/04 08:25:35 >>>: FLAGS ()
+2014/12/04 08:25:35 >>>: OK [PERMANENTFLAGS] ()
+2014/12/04 08:25:35 >>>: 2 EXISTS
+2014/12/04 08:25:35 >>>: 0 RECENT
+2014/12/04 08:25:35 >>>: OK [UNSEEN 0]
+2014/12/04 08:25:35 >>>: OK [UIDVALIDITY 13123] UIDs valid
+2014/12/04 08:25:35 >>>: OK [UIDNEXT 4] Predicted next UID
+2014/12/04 08:25:35 >>>: 9 OK [READ-WRITE] SELECT completed
+2014/12/04 08:25:35 <<<: 10 UID FETCH 1:* (INTERNALDATE FLAGS)
+2014/12/04 08:25:35 123 fuid = 1, right = *, uid = 1, is_ok
+2014/12/04 08:25:35 >>>: 1 FETCH (UID 1 INTERNALDATE "09-Jul-2014 09:21:57 +0000" FLAGS (\seen \answered ))
+2014/12/04 08:25:35 123 fuid = 1, right = *, uid = 3, is_ok
+2014/12/04 08:25:35 >>>: 2 FETCH (UID 3 INTERNALDATE "09-Jul-2014 09:21:57 +0000" FLAGS (\seen \answered ))
+2014/12/04 08:25:35 >>>: 10 OK FETCH completed
+2014/12/04 08:25:36 <<<: 11 UID FETCH 1 (BODY.PEEK[])
+2014/12/04 08:25:36 <<<: 12 LOGOUT
+2014/12/04 08:25:36 client connected to pid 3214
+2014/12/04 08:25:36 client connected to pid 3217
+2014/12/04 08:25:36 client connected to pid 3220
+2014/12/04 08:25:36 <<<: 1 LOGIN fake_remote_email@domain.com "123456"
+2014/12/04 08:25:36 >>>: * CAPABILITY IMAP ID XLIST UIDPLUS UNSELECT MOVE
+2014/12/04 08:25:36 >>>: OK Authentication successful
+2014/12/04 08:25:36 <<<: 2 CAPABILITY
+2014/12/04 08:25:36 >>>: * CAPABILITY FAKE IMAP
+2014/12/04 08:25:36 >>>: * CAPABILITY ID XLIST UIDPLUS UNSELECT MOVE
+2014/12/04 08:25:36 >>>: OK CAPABILITY completed
+2014/12/04 08:25:36 <<<: 3 XLIST "" "*"
+2014/12/04 08:25:36 >>>: * XLIST () "/" "new_folder"
+2014/12/04 08:25:36 >>>: 3 OK LIST completed
+2014/12/04 08:25:36 <<<: 4 STATUS "new_folder" (UIDNEXT MESSAGES UIDVALIDITY)
+2014/12/04 08:25:36 >>>: STATUS "new_folder" (MESSAGES 1 RECENT 0 UIDNEXT 11 UIDVALIDITY 123456)
+2014/12/04 08:25:36 >>>: 4 OK STATUS completed
+2014/12/04 08:25:36 <<<: 5 SELECT "new_folder"
+2014/12/04 08:25:36 >>>: FLAGS ()
+2014/12/04 08:25:36 >>>: OK [PERMANENTFLAGS] ()
+2014/12/04 08:25:36 >>>: 1 EXISTS
+2014/12/04 08:25:36 >>>: 0 RECENT
+2014/12/04 08:25:36 >>>: OK [UNSEEN 1]
+2014/12/04 08:25:36 >>>: OK [UIDVALIDITY 123456] UIDs valid
+2014/12/04 08:25:36 >>>: OK [UIDNEXT 11] Predicted next UID
+2014/12/04 08:25:36 >>>: 5 OK [READ-WRITE] SELECT completed
+2014/12/04 08:25:36 <<<: 6 UID FETCH 1:* (INTERNALDATE FLAGS)
+2014/12/04 08:25:36 123 fuid = 1, right = *, uid = 10, is_ok
+2014/12/04 08:25:36 >>>: 1 FETCH (UID 10 INTERNALDATE "23-Aug-2013 00:00:33 +0000" FLAGS ())
+2014/12/04 08:25:36 >>>: 6 OK FETCH completed
+2014/12/04 08:25:36 <<<: 7 UID FETCH 10 (BODY.PEEK[])
+2014/12/04 08:25:37 <<<: 8 LOGOUT
+2014/12/04 11:58:41 $VAR1 = bless( {
+                 'is_read_only' => 0,
+                 'connection_number' => -1,
+                 'test' => [
+                             {
+                               'INBOX' => {
+                                            'uidvalidity' => '13123',
+                                            'flags' => [
+                                                         'hashnochildren',
+                                                         'noselect',
+                                                         'Inbox'
+                                                       ],
+                                            'uids' => {
+                                                        '1' => [
+                                                                 'seen',
+                                                                 'recent',
+                                                                 '09-Jul-2014 09:21:57 +0000',
+                                                                 'deleted'
+                                                               ],
+                                                        '3' => [
+                                                                 'recent',
+                                                                 'seen',
+                                                                 '09-Jul-2014 09:21:57 +0000',
+                                                                 'deleted'
+                                                               ],
+                                                        '5' => [
+                                                                 '09-Jul-2014 09:21:57 +0000 '
+                                                               ]
+                                                      }
+                                          },
+                               'test' => {
+                                           'uids' => {
+                                                       '11' => [
+                                                                 'recent',
+                                                                 '09-Jul-2014 09:21:57 +0000'
+                                                               ],
+                                                       '10' => [
+                                                                 'recent',
+                                                                 '09-Jul-2014 09:21:57 +0000'
+                                                               ]
+                                                     }
+                                         },
+                               'Sent' => {
+                                           'flags' => [
+                                                        'Sent'
+                                                      ],
+                                           'uids' => {
+                                                       '1' => [
+                                                                'recent',
+                                                                '09-Jul-2014 09:21:57 +0000'
+                                                              ]
+                                                     }
+                                         }
+                             },
+                             {
+                               'INBOX' => {
+                                            'uidvalidity' => '13123',
+                                            'flags' => [
+                                                         'Inbox'
+                                                       ],
+                                            'uids' => {
+                                                        '1' => [
+                                                                 'seen',
+                                                                 'answered',
+                                                                 '09-Jul-2014 09:21:57 +0000'
+                                                               ],
+                                                        '3' => [
+                                                                 'seen',
+                                                                 'answered',
+                                                                 '09-Jul-2014 09:21:57 +0000'
+                                                               ]
+                                                      }
+                                          }
+                             }
+                           ],
+                 'imap' => {
+                             'capability' => [
+                                               '* CAPABILITY FAKE IMAP',
+                                               '* CAPABILITY ID XLIST UIDPLUS UNSELECT MOVE',
+                                               'OK CAPABILITY completed'
+                                             ],
+                             'login' => [
+                                          '* CAPABILITY IMAP ID XLIST UIDPLUS UNSELECT MOVE',
+                                          'OK Authentication successful'
+                                        ]
+                           },
+                 'state' => 0,
+                 'client' => undef,
+                 'selected_folder' => '',
+                 'fetch_num' => {},
+                 'init_params' => {
+                                    'test' => 'tests/test0',
+                                    'test_dir' => 'tests',
+                                    'flags' => '662',
+                                    'mode' => 'config',
+                                    'useremail' => 'ksd001@mail.ru',
+                                    'ping_retries' => '20',
+                                    'port' => '8877',
+                                    'log_file' => './mylog.log',
+                                    'message' => 'message.eml',
+                                    'host' => 'localhost',
+                                    'email' => 'fake_remote_email@domain.com',
+                                    'password' => '123456',
+                                    'pid_file' => '/tmp/fake_imap_server.pid',
+                                    'log_level' => '3',
+                                    'config' => './/config.conf',
+                                    'exec' => '../BUILD/collector --log=imap'
+                                  },
+                 'test_amount' => '2',
+                 'server' => undef,
+                 'logger' => bless( {
+                                      'is_OFF' => sub { "DUMMY" },
+                                      'is_DEBUG' => sub { "DUMMY" },
+                                      'ERROR' => sub { "DUMMY" },
+                                      'is_INFO' => sub { "DUMMY" },
+                                      'layout' => undef,
+                                      'category' => 'fake_imap_server',
+                                      'is_TRACE' => sub { "DUMMY" },
+                                      'DEBUG' => $VAR1->{'logger'}{'ERROR'},
+                                      'is_ALL' => sub { "DUMMY" },
+                                      'additivity' => 1,
+                                      'TRACE' => sub { "DUMMY" },
+                                      'ALL' => $VAR1->{'logger'}{'TRACE'},
+                                      'is_FATAL' => sub { "DUMMY" },
+                                      'is_WARN' => sub { "DUMMY" },
+                                      'FATAL' => $VAR1->{'logger'}{'ERROR'},
+                                      'appender_names' => [],
+                                      'WARN' => $VAR1->{'logger'}{'ERROR'},
+                                      'INFO' => $VAR1->{'logger'}{'ERROR'},
+                                      'level' => undef,
+                                      'num_appenders' => 0,
+                                      'OFF' => $VAR1->{'logger'}{'ERROR'},
+                                      'is_ERROR' => sub { "DUMMY" }
+                                    }, 'Log::Log4perl::Logger' )
+               }, 'fake_imap_server' );
+2014/12/04 11:58:41 CONNECTION NUMBER =>0
+2014/12/04 11:58:41 client connected to pid 11238
+2014/12/04 11:58:41 >>>: OK Fake Imap Server is working hard
+2014/12/04 11:58:41 CONNECTION NUMBER =>0
+2014/12/04 11:58:41 client connected to pid 11241
+2014/12/04 11:58:41 <<<: 1 LOGIN fake_remote_email@domain.com "123456"
+2014/12/04 11:58:41 >>>: * CAPABILITY IMAP ID XLIST UIDPLUS UNSELECT MOVE
+2014/12/04 11:58:41 >>>: OK Authentication successful
+2014/12/04 11:58:41 <<<: 2 CAPABILITY
+2014/12/04 11:58:41 >>>: * CAPABILITY FAKE IMAP
+2014/12/04 11:58:41 >>>: * CAPABILITY ID XLIST UIDPLUS UNSELECT MOVE
+2014/12/04 11:58:41 >>>: OK CAPABILITY completed
+2014/12/04 11:58:41 <<<: 3 XLIST "" "*"
+2014/12/04 11:58:41 >>>: * XLIST (\hashnochildren \noselect \Inbox) "/" "INBOX"
+2014/12/04 11:58:41 >>>: * XLIST () "/" "test"
+2014/12/04 11:58:41 >>>: * XLIST (\Sent) "/" "Sent"
+2014/12/04 11:58:41 >>>: 3 OK LIST completed
+2014/12/04 11:58:41 <<<: 4 STATUS "test" (UIDNEXT MESSAGES UIDVALIDITY)
+2014/12/04 11:58:41 >>>: STATUS "test" (MESSAGES 2 RECENT 2 UIDNEXT 12 UIDVALIDITY 123456)
+2014/12/04 11:58:41 >>>: 4 OK STATUS completed
+2014/12/04 11:58:41 <<<: 5 STATUS "Sent" (UIDNEXT MESSAGES UIDVALIDITY)
+2014/12/04 11:58:41 >>>: STATUS "Sent" (MESSAGES 1 RECENT 1 UIDNEXT 2 UIDVALIDITY 123456)
+2014/12/04 11:58:41 >>>: 5 OK STATUS completed
+2014/12/04 11:58:41 <<<: 6 SELECT "test"
+2014/12/04 11:58:41 >>>: FLAGS ()
+2014/12/04 11:58:41 >>>: OK [PERMANENTFLAGS] ()
+2014/12/04 11:58:41 >>>: 2 EXISTS
+2014/12/04 11:58:41 >>>: 2 RECENT
+2014/12/04 11:58:41 >>>: OK [UNSEEN 2]
+2014/12/04 11:58:41 >>>: OK [UIDVALIDITY 123456] UIDs valid
+2014/12/04 11:58:41 >>>: OK [UIDNEXT 12] Predicted next UID
+2014/12/04 11:58:41 >>>: 6 OK [READ-WRITE] SELECT completed
+2014/12/04 11:58:41 <<<: 7 UID FETCH 1:* (INTERNALDATE FLAGS)
+2014/12/04 11:58:41 123 fuid = 1, right = *, uid = 10, is_ok
+2014/12/04 11:58:41 >>>: 1 FETCH (UID 10 INTERNALDATE "09-Jul-2014 09:21:57 +0000" FLAGS (\recent ))
+2014/12/04 11:58:41 123 fuid = 1, right = *, uid = 11, is_ok
+2014/12/04 11:58:41 >>>: 2 FETCH (UID 11 INTERNALDATE "09-Jul-2014 09:21:57 +0000" FLAGS (\recent ))
+2014/12/04 11:58:41 >>>: 7 OK FETCH completed
+2014/12/04 11:58:41 <<<: 8 UID FETCH 11 (BODY.PEEK[])
+2014/12/04 11:58:41 <<<: 9 UID FETCH 10 (BODY.PEEK[])
+2014/12/04 11:58:41 <<<: 10 SELECT "Sent"
+2014/12/04 11:58:41 >>>: FLAGS ()
+2014/12/04 11:58:41 >>>: OK [PERMANENTFLAGS] ()
+2014/12/04 11:58:41 >>>: 1 EXISTS
+2014/12/04 11:58:41 >>>: 1 RECENT
+2014/12/04 11:58:41 >>>: OK [UNSEEN 1]
+2014/12/04 11:58:41 >>>: OK [UIDVALIDITY 123456] UIDs valid
+2014/12/04 11:58:41 >>>: OK [UIDNEXT 2] Predicted next UID
+2014/12/04 11:58:41 >>>: 10 OK [READ-WRITE] SELECT completed
+2014/12/04 11:58:41 <<<: 11 UID FETCH 1:* (INTERNALDATE FLAGS)
+2014/12/04 11:58:41 123 fuid = 1, right = *, uid = 1, is_ok
+2014/12/04 11:58:41 >>>: 1 FETCH (UID 1 INTERNALDATE "09-Jul-2014 09:21:57 +0000" FLAGS (\recent ))
+2014/12/04 11:58:41 >>>: 11 OK FETCH completed
+2014/12/04 11:58:42 <<<: 12 UID FETCH 1 (BODY.PEEK[])
+2014/12/04 11:58:42 <<<: 13 LOGOUT
+2014/12/04 11:58:42 CONNECTION NUMBER =>1
+2014/12/04 11:58:42 client connected to pid 11244
+2014/12/04 11:58:42 <<<: 1 LOGIN fake_remote_email@domain.com "123456"
+2014/12/04 11:58:42 >>>: * CAPABILITY IMAP ID XLIST UIDPLUS UNSELECT MOVE
+2014/12/04 11:58:42 >>>: OK Authentication successful
+2014/12/04 11:58:42 <<<: 2 CAPABILITY
+2014/12/04 11:58:42 >>>: * CAPABILITY FAKE IMAP
+2014/12/04 11:58:42 >>>: * CAPABILITY ID XLIST UIDPLUS UNSELECT MOVE
+2014/12/04 11:58:42 >>>: OK CAPABILITY completed
+2014/12/04 11:58:42 <<<: 3 XLIST "" "*"
+2014/12/04 11:58:42 >>>: * XLIST (\Inbox) "/" "INBOX"
+2014/12/04 11:58:42 >>>: 3 OK LIST completed
+2014/12/04 11:58:42 <<<: 4 STATUS "INBOX" (UIDNEXT MESSAGES UIDVALIDITY)
+2014/12/04 11:58:42 >>>: STATUS "INBOX" (MESSAGES 2 RECENT 0 UIDNEXT 4 UIDVALIDITY 13123)
+2014/12/04 11:58:42 >>>: 4 OK STATUS completed
+2014/12/04 11:58:42 <<<: 5 SELECT "INBOX"
+2014/12/04 11:58:42 >>>: FLAGS ()
+2014/12/04 11:58:42 >>>: OK [PERMANENTFLAGS] ()
+2014/12/04 11:58:42 >>>: 2 EXISTS
+2014/12/04 11:58:42 >>>: 0 RECENT
+2014/12/04 11:58:42 >>>: OK [UNSEEN 0]
+2014/12/04 11:58:42 >>>: OK [UIDVALIDITY 13123] UIDs valid
+2014/12/04 11:58:42 >>>: OK [UIDNEXT 4] Predicted next UID
+2014/12/04 11:58:42 >>>: 5 OK [READ-WRITE] SELECT completed
+2014/12/04 11:58:42 <<<: 6 UID FETCH 1:* (INTERNALDATE FLAGS)
+2014/12/04 11:58:42 123 fuid = 1, right = *, uid = 1, is_ok
+2014/12/04 11:58:42 >>>: 1 FETCH (UID 1 INTERNALDATE "09-Jul-2014 09:21:57 +0000" FLAGS (\seen \answered ))
+2014/12/04 11:58:42 123 fuid = 1, right = *, uid = 3, is_ok
+2014/12/04 11:58:42 >>>: 2 FETCH (UID 3 INTERNALDATE "09-Jul-2014 09:21:57 +0000" FLAGS (\seen \answered ))
+2014/12/04 11:58:42 >>>: 6 OK FETCH completed
+2014/12/04 11:58:42 <<<: 7 UID FETCH 1 (BODY.PEEK[])
+2014/12/04 11:58:42 <<<: 8 LOGOUT
+2014/12/04 11:58:42 $VAR1 = bless( {
+                 'is_read_only' => 0,
+                 'connection_number' => -1,
+                 'test' => [
+                             {
+                               'INBOX' => {
+                                            'uidvalidity' => '13123',
+                                            'flags' => [
+                                                         'hashnochildren',
+                                                         'noselect',
+                                                         'Inbox'
+                                                       ],
+                                            'uids' => {
+                                                        '1' => [
+                                                                 'seen',
+                                                                 'recent',
+                                                                 '09-Jul-2014 09:21:57 +0000',
+                                                                 'deleted'
+                                                               ],
+                                                        '3' => [
+                                                                 'recent',
+                                                                 'seen',
+                                                                 '09-Jul-2014 09:21:57 +0000',
+                                                                 'deleted'
+                                                               ],
+                                                        '5' => [
+                                                                 '09-Jul-2014 09:21:57 +0000 '
+                                                               ]
+                                                      }
+                                          },
+                               'test' => {
+                                           'uids' => {
+                                                       '11' => [
+                                                                 'recent',
+                                                                 '09-Jul-2014 09:21:57 +0000'
+                                                               ],
+                                                       '10' => [
+                                                                 'recent',
+                                                                 '09-Jul-2014 09:21:57 +0000'
+                                                               ]
+                                                     }
+                                         },
+                               'Sent' => {
+                                           'flags' => [
+                                                        'Sent'
+                                                      ],
+                                           'uids' => {
+                                                       '1' => [
+                                                                'recent',
+                                                                '09-Jul-2014 09:21:57 +0000'
+                                                              ]
+                                                     }
+                                         }
+                             },
+                             {
+                               'new_folder' => {
+                                                 'uids' => {
+                                                             '10' => [
+                                                                       '23-Aug-2013 00:00:33 +0000'
+                                                                     ]
+                                                           }
+                                               }
+                             }
+                           ],
+                 'imap' => {
+                             'capability' => [
+                                               '* CAPABILITY FAKE IMAP',
+                                               '* CAPABILITY ID XLIST UIDPLUS UNSELECT MOVE',
+                                               'OK CAPABILITY completed'
+                                             ],
+                             'login' => [
+                                          '* CAPABILITY IMAP ID XLIST UIDPLUS UNSELECT MOVE',
+                                          'OK Authentication successful'
+                                        ]
+                           },
+                 'state' => 0,
+                 'client' => undef,
+                 'selected_folder' => '',
+                 'fetch_num' => {},
+                 'init_params' => {
+                                    'test' => 'tests/test2',
+                                    'test_dir' => 'tests',
+                                    'flags' => '662',
+                                    'mode' => 'config',
+                                    'useremail' => 'ksd001@mail.ru',
+                                    'ping_retries' => '20',
+                                    'port' => '8877',
+                                    'log_file' => './mylog.log',
+                                    'message' => 'message.eml',
+                                    'host' => 'localhost',
+                                    'email' => 'fake_remote_email@domain.com',
+                                    'password' => '123456',
+                                    'pid_file' => '/tmp/fake_imap_server.pid',
+                                    'log_level' => '3',
+                                    'config' => './/config.conf',
+                                    'exec' => '../BUILD/collector --log=imap'
+                                  },
+                 'test_amount' => '2',
+                 'server' => undef,
+                 'logger' => bless( {
+                                      'is_OFF' => sub { "DUMMY" },
+                                      'is_DEBUG' => sub { "DUMMY" },
+                                      'ERROR' => sub { "DUMMY" },
+                                      'is_INFO' => sub { "DUMMY" },
+                                      'layout' => undef,
+                                      'category' => 'fake_imap_server',
+                                      'is_TRACE' => sub { "DUMMY" },
+                                      'DEBUG' => $VAR1->{'logger'}{'ERROR'},
+                                      'is_ALL' => sub { "DUMMY" },
+                                      'additivity' => 1,
+                                      'TRACE' => sub { "DUMMY" },
+                                      'ALL' => $VAR1->{'logger'}{'TRACE'},
+                                      'is_FATAL' => sub { "DUMMY" },
+                                      'is_WARN' => sub { "DUMMY" },
+                                      'FATAL' => $VAR1->{'logger'}{'ERROR'},
+                                      'appender_names' => [],
+                                      'WARN' => $VAR1->{'logger'}{'ERROR'},
+                                      'INFO' => $VAR1->{'logger'}{'ERROR'},
+                                      'level' => undef,
+                                      'num_appenders' => 0,
+                                      'OFF' => $VAR1->{'logger'}{'ERROR'},
+                                      'is_ERROR' => sub { "DUMMY" }
+                                    }, 'Log::Log4perl::Logger' )
+               }, 'fake_imap_server' );
+2014/12/04 11:58:42 CONNECTION NUMBER =>0
+2014/12/04 11:58:42 client connected to pid 11247
+2014/12/04 11:58:42 >>>: OK Fake Imap Server is working hard
+2014/12/04 11:58:42 CONNECTION NUMBER =>0
+2014/12/04 11:58:42 client connected to pid 11250
+2014/12/04 11:58:42 <<<: 1 LOGIN fake_remote_email@domain.com "123456"
+2014/12/04 11:58:42 >>>: * CAPABILITY IMAP ID XLIST UIDPLUS UNSELECT MOVE
+2014/12/04 11:58:42 >>>: OK Authentication successful
+2014/12/04 11:58:42 <<<: 2 CAPABILITY
+2014/12/04 11:58:42 >>>: * CAPABILITY FAKE IMAP
+2014/12/04 11:58:42 >>>: * CAPABILITY ID XLIST UIDPLUS UNSELECT MOVE
+2014/12/04 11:58:42 >>>: OK CAPABILITY completed
+2014/12/04 11:58:43 <<<: 3 XLIST "" "*"
+2014/12/04 11:58:43 >>>: * XLIST (\hashnochildren \noselect \Inbox) "/" "INBOX"
+2014/12/04 11:58:43 >>>: * XLIST () "/" "test"
+2014/12/04 11:58:43 >>>: * XLIST (\Sent) "/" "Sent"
+2014/12/04 11:58:43 >>>: 3 OK LIST completed
+2014/12/04 11:58:43 <<<: 4 STATUS "test" (UIDNEXT MESSAGES UIDVALIDITY)
+2014/12/04 11:58:43 >>>: STATUS "test" (MESSAGES 2 RECENT 2 UIDNEXT 12 UIDVALIDITY 123456)
+2014/12/04 11:58:43 >>>: 4 OK STATUS completed
+2014/12/04 11:58:43 <<<: 5 STATUS "Sent" (UIDNEXT MESSAGES UIDVALIDITY)
+2014/12/04 11:58:43 >>>: STATUS "Sent" (MESSAGES 1 RECENT 1 UIDNEXT 2 UIDVALIDITY 123456)
+2014/12/04 11:58:43 >>>: 5 OK STATUS completed
+2014/12/04 11:58:43 <<<: 6 SELECT "test"
+2014/12/04 11:58:43 >>>: FLAGS ()
+2014/12/04 11:58:43 >>>: OK [PERMANENTFLAGS] ()
+2014/12/04 11:58:43 >>>: 2 EXISTS
+2014/12/04 11:58:43 >>>: 2 RECENT
+2014/12/04 11:58:43 >>>: OK [UNSEEN 2]
+2014/12/04 11:58:43 >>>: OK [UIDVALIDITY 123456] UIDs valid
+2014/12/04 11:58:43 >>>: OK [UIDNEXT 12] Predicted next UID
+2014/12/04 11:58:43 >>>: 6 OK [READ-WRITE] SELECT completed
+2014/12/04 11:58:43 <<<: 7 UID FETCH 1:* (INTERNALDATE FLAGS)
+2014/12/04 11:58:43 123 fuid = 1, right = *, uid = 10, is_ok
+2014/12/04 11:58:43 >>>: 1 FETCH (UID 10 INTERNALDATE "09-Jul-2014 09:21:57 +0000" FLAGS (\recent ))
+2014/12/04 11:58:43 123 fuid = 1, right = *, uid = 11, is_ok
+2014/12/04 11:58:43 >>>: 2 FETCH (UID 11 INTERNALDATE "09-Jul-2014 09:21:57 +0000" FLAGS (\recent ))
+2014/12/04 11:58:43 >>>: 7 OK FETCH completed
+2014/12/04 11:58:43 <<<: 8 UID FETCH 11 (BODY.PEEK[])
+2014/12/04 11:58:43 <<<: 9 UID FETCH 10 (BODY.PEEK[])
+2014/12/04 11:58:43 <<<: 10 SELECT "Sent"
+2014/12/04 11:58:43 >>>: FLAGS ()
+2014/12/04 11:58:43 >>>: OK [PERMANENTFLAGS] ()
+2014/12/04 11:58:43 >>>: 1 EXISTS
+2014/12/04 11:58:43 >>>: 1 RECENT
+2014/12/04 11:58:43 >>>: OK [UNSEEN 1]
+2014/12/04 11:58:43 >>>: OK [UIDVALIDITY 123456] UIDs valid
+2014/12/04 11:58:43 >>>: OK [UIDNEXT 2] Predicted next UID
+2014/12/04 11:58:43 >>>: 10 OK [READ-WRITE] SELECT completed
+2014/12/04 11:58:43 <<<: 11 UID FETCH 1:* (INTERNALDATE FLAGS)
+2014/12/04 11:58:43 123 fuid = 1, right = *, uid = 1, is_ok
+2014/12/04 11:58:43 >>>: 1 FETCH (UID 1 INTERNALDATE "09-Jul-2014 09:21:57 +0000" FLAGS (\recent ))
+2014/12/04 11:58:43 >>>: 11 OK FETCH completed
+2014/12/04 11:58:43 <<<: 12 UID FETCH 1 (BODY.PEEK[])
+2014/12/04 11:58:43 <<<: 13 LOGOUT
+2014/12/04 11:58:43 CONNECTION NUMBER =>1
+2014/12/04 11:58:43 client connected to pid 11253
+2014/12/04 11:58:43 <<<: 1 LOGIN fake_remote_email@domain.com "123456"
+2014/12/04 11:58:43 >>>: * CAPABILITY IMAP ID XLIST UIDPLUS UNSELECT MOVE
+2014/12/04 11:58:43 >>>: OK Authentication successful
+2014/12/04 11:58:43 <<<: 2 CAPABILITY
+2014/12/04 11:58:43 >>>: * CAPABILITY FAKE IMAP
+2014/12/04 11:58:43 >>>: * CAPABILITY ID XLIST UIDPLUS UNSELECT MOVE
+2014/12/04 11:58:43 >>>: OK CAPABILITY completed
+2014/12/04 11:58:43 <<<: 3 XLIST "" "*"
+2014/12/04 11:58:43 >>>: * XLIST () "/" "new_folder"
+2014/12/04 11:58:43 >>>: 3 OK LIST completed
+2014/12/04 11:58:43 <<<: 4 STATUS "new_folder" (UIDNEXT MESSAGES UIDVALIDITY)
+2014/12/04 11:58:43 >>>: STATUS "new_folder" (MESSAGES 1 RECENT 0 UIDNEXT 11 UIDVALIDITY 123456)
+2014/12/04 11:58:43 >>>: 4 OK STATUS completed
+2014/12/04 11:58:43 <<<: 5 SELECT "new_folder"
+2014/12/04 11:58:43 >>>: FLAGS ()
+2014/12/04 11:58:43 >>>: OK [PERMANENTFLAGS] ()
+2014/12/04 11:58:43 >>>: 1 EXISTS
+2014/12/04 11:58:43 >>>: 0 RECENT
+2014/12/04 11:58:43 >>>: OK [UNSEEN 1]
+2014/12/04 11:58:43 >>>: OK [UIDVALIDITY 123456] UIDs valid
+2014/12/04 11:58:43 >>>: OK [UIDNEXT 11] Predicted next UID
+2014/12/04 11:58:43 >>>: 5 OK [READ-WRITE] SELECT completed
+2014/12/04 11:58:43 <<<: 6 UID FETCH 1:* (INTERNALDATE FLAGS)
+2014/12/04 11:58:43 123 fuid = 1, right = *, uid = 10, is_ok
+2014/12/04 11:58:43 >>>: 1 FETCH (UID 10 INTERNALDATE "23-Aug-2013 00:00:33 +0000" FLAGS ())
+2014/12/04 11:58:43 >>>: 6 OK FETCH completed
+2014/12/04 11:58:43 <<<: 7 UID FETCH 10 (BODY.PEEK[])
+2014/12/04 11:58:43 <<<: 8 LOGOUT
+2014/12/05 08:58:39 $VAR1 = bless( {
+                 'is_read_only' => 0,
+                 'connection_number' => -1,
+                 'test' => [
+                             {
+                               'INBOX' => {
+                                            'uidvalidity' => '13123',
+                                            'flags' => [
+                                                         'hashnochildren',
+                                                         'noselect',
+                                                         'Inbox'
+                                                       ],
+                                            'uids' => {
+                                                        '1' => [
+                                                                 'seen',
+                                                                 'recent',
+                                                                 '09-Jul-2014 09:21:57 +0000',
+                                                                 'deleted'
+                                                               ],
+                                                        '3' => [
+                                                                 'recent',
+                                                                 'seen',
+                                                                 '09-Jul-2014 09:21:57 +0000',
+                                                                 'deleted'
+                                                               ],
+                                                        '5' => [
+                                                                 '09-Jul-2014 09:21:57 +0000 '
+                                                               ]
+                                                      }
+                                          },
+                               'test' => {
+                                           'uids' => {
+                                                       '11' => [
+                                                                 'recent',
+                                                                 '09-Jul-2014 09:21:57 +0000'
+                                                               ],
+                                                       '10' => [
+                                                                 'recent',
+                                                                 '09-Jul-2014 09:21:57 +0000'
+                                                               ]
+                                                     }
+                                         },
+                               'Sent' => {
+                                           'flags' => [
+                                                        'Sent'
+                                                      ],
+                                           'uids' => {
+                                                       '1' => [
+                                                                'recent',
+                                                                '09-Jul-2014 09:21:57 +0000'
+                                                              ]
+                                                     }
+                                         }
+                             },
+                             {
+                               'INBOX' => {
+                                            'uidvalidity' => '13123',
+                                            'flags' => [
+                                                         'Inbox'
+                                                       ],
+                                            'uids' => {
+                                                        '1' => [
+                                                                 'seen',
+                                                                 'answered',
+                                                                 '09-Jul-2014 09:21:57 +0000'
+                                                               ],
+                                                        '3' => [
+                                                                 'seen',
+                                                                 'answered',
+                                                                 '09-Jul-2014 09:21:57 +0000'
+                                                               ]
+                                                      }
+                                          }
+                             }
+                           ],
+                 'imap' => {
+                             'capability' => [
+                                               '* CAPABILITY FAKE IMAP',
+                                               '* CAPABILITY ID XLIST UIDPLUS UNSELECT MOVE',
+                                               'OK CAPABILITY completed'
+                                             ],
+                             'login' => [
+                                          '* CAPABILITY IMAP ID XLIST UIDPLUS UNSELECT MOVE',
+                                          'OK Authentication successful'
+                                        ]
+                           },
+                 'state' => 0,
+                 'client' => undef,
+                 'selected_folder' => '',
+                 'fetch_num' => {},
+                 'init_params' => {
+                                    'test' => 'tests/test0',
+                                    'test_dir' => 'tests',
+                                    'flags' => '662',
+                                    'mode' => 'config',
+                                    'useremail' => 'rimap_test1@mail.ru',
+                                    'ping_retries' => '20',
+                                    'port' => '8877',
+                                    'log_file' => './mylog.log',
+                                    'message' => 'message.eml',
+                                    'host' => 'localhost',
+                                    'email' => 'fake_remote_email@domain.com',
+                                    'password' => '123456',
+                                    'pid_file' => '/tmp/fake_imap_server.pid',
+                                    'log_level' => '3',
+                                    'config' => './/config.conf',
+                                    'exec' => '../BUILD/collector --log=imap'
+                                  },
+                 'test_amount' => '2',
+                 'server' => undef,
+                 'logger' => bless( {
+                                      'is_OFF' => sub { "DUMMY" },
+                                      'is_DEBUG' => sub { "DUMMY" },
+                                      'ERROR' => sub { "DUMMY" },
+                                      'is_INFO' => sub { "DUMMY" },
+                                      'layout' => undef,
+                                      'category' => 'fake_imap_server',
+                                      'is_TRACE' => sub { "DUMMY" },
+                                      'DEBUG' => $VAR1->{'logger'}{'ERROR'},
+                                      'is_ALL' => sub { "DUMMY" },
+                                      'additivity' => 1,
+                                      'TRACE' => sub { "DUMMY" },
+                                      'ALL' => $VAR1->{'logger'}{'TRACE'},
+                                      'is_FATAL' => sub { "DUMMY" },
+                                      'is_WARN' => sub { "DUMMY" },
+                                      'FATAL' => $VAR1->{'logger'}{'ERROR'},
+                                      'appender_names' => [],
+                                      'WARN' => $VAR1->{'logger'}{'ERROR'},
+                                      'INFO' => $VAR1->{'logger'}{'ERROR'},
+                                      'level' => undef,
+                                      'num_appenders' => 0,
+                                      'OFF' => $VAR1->{'logger'}{'ERROR'},
+                                      'is_ERROR' => sub { "DUMMY" }
+                                    }, 'Log::Log4perl::Logger' )
+               }, 'fake_imap_server' );
+2014/12/05 08:58:46 $VAR1 = bless( {
+                 'is_read_only' => 0,
+                 'connection_number' => -1,
+                 'test' => [
+                             {
+                               'INBOX' => {
+                                            'uidvalidity' => '13123',
+                                            'flags' => [
+                                                         'hashnochildren',
+                                                         'noselect',
+                                                         'Inbox'
+                                                       ],
+                                            'uids' => {
+                                                        '1' => [
+                                                                 'seen',
+                                                                 'recent',
+                                                                 '09-Jul-2014 09:21:57 +0000',
+                                                                 'deleted'
+                                                               ],
+                                                        '3' => [
+                                                                 'recent',
+                                                                 'seen',
+                                                                 '09-Jul-2014 09:21:57 +0000',
+                                                                 'deleted'
+                                                               ],
+                                                        '5' => [
+                                                                 '09-Jul-2014 09:21:57 +0000 '
+                                                               ]
+                                                      }
+                                          },
+                               'test' => {
+                                           'uids' => {
+                                                       '11' => [
+                                                                 'recent',
+                                                                 '09-Jul-2014 09:21:57 +0000'
+                                                               ],
+                                                       '10' => [
+                                                                 'recent',
+                                                                 '09-Jul-2014 09:21:57 +0000'
+                                                               ]
+                                                     }
+                                         },
+                               'Sent' => {
+                                           'flags' => [
+                                                        'Sent'
+                                                      ],
+                                           'uids' => {
+                                                       '1' => [
+                                                                'recent',
+                                                                '09-Jul-2014 09:21:57 +0000'
+                                                              ]
+                                                     }
+                                         }
+                             },
+                             {
+                               'INBOX' => {
+                                            'uidvalidity' => '13123',
+                                            'flags' => [
+                                                         'Inbox'
+                                                       ],
+                                            'uids' => {
+                                                        '1' => [
+                                                                 'seen',
+                                                                 'answered',
+                                                                 '09-Jul-2014 09:21:57 +0000'
+                                                               ],
+                                                        '3' => [
+                                                                 'seen',
+                                                                 'answered',
+                                                                 '09-Jul-2014 09:21:57 +0000'
+                                                               ]
+                                                      }
+                                          }
+                             }
+                           ],
+                 'imap' => {
+                             'capability' => [
+                                               '* CAPABILITY FAKE IMAP',
+                                               '* CAPABILITY ID XLIST UIDPLUS UNSELECT MOVE',
+                                               'OK CAPABILITY completed'
+                                             ],
+                             'login' => [
+                                          '* CAPABILITY IMAP ID XLIST UIDPLUS UNSELECT MOVE',
+                                          'OK Authentication successful'
+                                        ]
+                           },
+                 'state' => 0,
+                 'client' => undef,
+                 'selected_folder' => '',
+                 'fetch_num' => {},
+                 'init_params' => {
+                                    'test' => 'tests/test0',
+                                    'test_dir' => 'tests',
+                                    'flags' => '662',
+                                    'mode' => 'config',
+                                    'useremail' => 'rimap_test1@mail.ru',
+                                    'ping_retries' => '20',
+                                    'port' => '8877',
+                                    'log_file' => './mylog.log',
+                                    'message' => 'message.eml',
+                                    'host' => 'localhost',
+                                    'email' => 'fake_remote_email@domain.com',
+                                    'password' => '123456',
+                                    'pid_file' => '/tmp/fake_imap_server.pid',
+                                    'log_level' => '3',
+                                    'config' => './/config.conf',
+                                    'exec' => '../BUILD/collector --log=imap'
+                                  },
+                 'test_amount' => '2',
+                 'server' => undef,
+                 'logger' => bless( {
+                                      'is_OFF' => sub { "DUMMY" },
+                                      'is_DEBUG' => sub { "DUMMY" },
+                                      'ERROR' => sub { "DUMMY" },
+                                      'is_INFO' => sub { "DUMMY" },
+                                      'layout' => undef,
+                                      'category' => 'fake_imap_server',
+                                      'is_TRACE' => sub { "DUMMY" },
+                                      'DEBUG' => $VAR1->{'logger'}{'ERROR'},
+                                      'is_ALL' => sub { "DUMMY" },
+                                      'additivity' => 1,
+                                      'TRACE' => sub { "DUMMY" },
+                                      'ALL' => $VAR1->{'logger'}{'TRACE'},
+                                      'is_FATAL' => sub { "DUMMY" },
+                                      'is_WARN' => sub { "DUMMY" },
+                                      'FATAL' => $VAR1->{'logger'}{'ERROR'},
+                                      'appender_names' => [],
+                                      'WARN' => $VAR1->{'logger'}{'ERROR'},
+                                      'INFO' => $VAR1->{'logger'}{'ERROR'},
+                                      'level' => undef,
+                                      'num_appenders' => 0,
+                                      'OFF' => $VAR1->{'logger'}{'ERROR'},
+                                      'is_ERROR' => sub { "DUMMY" }
+                                    }, 'Log::Log4perl::Logger' )
+               }, 'fake_imap_server' );
+2014/12/05 08:58:46 CONNECTION NUMBER =>0
+2014/12/05 08:58:46 client connected to pid 18420
+2014/12/05 08:58:46 >>>: OK Fake Imap Server is working hard
+2014/12/05 08:58:47 $VAR1 = bless( {
+                 'is_read_only' => 0,
+                 'connection_number' => -1,
+                 'test' => [
+                             {
+                               'INBOX' => {
+                                            'uidvalidity' => '13123',
+                                            'flags' => [
+                                                         'hashnochildren',
+                                                         'noselect',
+                                                         'Inbox'
+                                                       ],
+                                            'uids' => {
+                                                        '1' => [
+                                                                 'seen',
+                                                                 'recent',
+                                                                 '09-Jul-2014 09:21:57 +0000',
+                                                                 'deleted'
+                                                               ],
+                                                        '3' => [
+                                                                 'recent',
+                                                                 'seen',
+                                                                 '09-Jul-2014 09:21:57 +0000',
+                                                                 'deleted'
+                                                               ],
+                                                        '5' => [
+                                                                 '09-Jul-2014 09:21:57 +0000 '
+                                                               ]
+                                                      }
+                                          },
+                               'test' => {
+                                           'uids' => {
+                                                       '11' => [
+                                                                 'recent',
+                                                                 '09-Jul-2014 09:21:57 +0000'
+                                                               ],
+                                                       '10' => [
+                                                                 'recent',
+                                                                 '09-Jul-2014 09:21:57 +0000'
+                                                               ]
+                                                     }
+                                         },
+                               'Sent' => {
+                                           'flags' => [
+                                                        'Sent'
+                                                      ],
+                                           'uids' => {
+                                                       '1' => [
+                                                                'recent',
+                                                                '09-Jul-2014 09:21:57 +0000'
+                                                              ]
+                                                     }
+                                         }
+                             },
+                             {
+                               'new_folder' => {
+                                                 'uids' => {
+                                                             '10' => [
+                                                                       '23-Aug-2013 00:00:33 +0000'
+                                                                     ]
+                                                           }
+                                               }
+                             }
+                           ],
+                 'imap' => {
+                             'capability' => [
+                                               '* CAPABILITY FAKE IMAP',
+                                               '* CAPABILITY ID XLIST UIDPLUS UNSELECT MOVE',
+                                               'OK CAPABILITY completed'
+                                             ],
+                             'login' => [
+                                          '* CAPABILITY IMAP ID XLIST UIDPLUS UNSELECT MOVE',
+                                          'OK Authentication successful'
+                                        ]
+                           },
+                 'state' => 0,
+                 'client' => undef,
+                 'selected_folder' => '',
+                 'fetch_num' => {},
+                 'init_params' => {
+                                    'test' => 'tests/test2',
+                                    'test_dir' => 'tests',
+                                    'flags' => '662',
+                                    'mode' => 'config',
+                                    'useremail' => 'rimap_test1@mail.ru',
+                                    'ping_retries' => '20',
+                                    'port' => '8877',
+                                    'log_file' => './mylog.log',
+                                    'message' => 'message.eml',
+                                    'host' => 'localhost',
+                                    'email' => 'fake_remote_email@domain.com',
+                                    'password' => '123456',
+                                    'pid_file' => '/tmp/fake_imap_server.pid',
+                                    'log_level' => '3',
+                                    'config' => './/config.conf',
+                                    'exec' => '../BUILD/collector --log=imap'
+                                  },
+                 'test_amount' => '2',
+                 'server' => undef,
+                 'logger' => bless( {
+                                      'is_OFF' => sub { "DUMMY" },
+                                      'is_DEBUG' => sub { "DUMMY" },
+                                      'ERROR' => sub { "DUMMY" },
+                                      'is_INFO' => sub { "DUMMY" },
+                                      'layout' => undef,
+                                      'category' => 'fake_imap_server',
+                                      'is_TRACE' => sub { "DUMMY" },
+                                      'DEBUG' => $VAR1->{'logger'}{'ERROR'},
+                                      'is_ALL' => sub { "DUMMY" },
+                                      'additivity' => 1,
+                                      'TRACE' => sub { "DUMMY" },
+                                      'ALL' => $VAR1->{'logger'}{'TRACE'},
+                                      'is_FATAL' => sub { "DUMMY" },
+                                      'is_WARN' => sub { "DUMMY" },
+                                      'FATAL' => $VAR1->{'logger'}{'ERROR'},
+                                      'appender_names' => [],
+                                      'WARN' => $VAR1->{'logger'}{'ERROR'},
+                                      'INFO' => $VAR1->{'logger'}{'ERROR'},
+                                      'level' => undef,
+                                      'num_appenders' => 0,
+                                      'OFF' => $VAR1->{'logger'}{'ERROR'},
+                                      'is_ERROR' => sub { "DUMMY" }
+                                    }, 'Log::Log4perl::Logger' )
+               }, 'fake_imap_server' );
+2014/12/05 08:58:47 CONNECTION NUMBER =>0
+2014/12/05 08:58:47 client connected to pid 18428
+2014/12/05 08:58:47 >>>: OK Fake Imap Server is working hard
+2014/12/05 08:59:56 $VAR1 = bless( {
+                 'is_read_only' => 0,
+                 'connection_number' => -1,
+                 'test' => [
+                             {
+                               'INBOX' => {
+                                            'uidvalidity' => '13123',
+                                            'flags' => [
+                                                         'hashnochildren',
+                                                         'noselect',
+                                                         'Inbox'
+                                                       ],
+                                            'uids' => {
+                                                        '1' => [
+                                                                 'seen',
+                                                                 'recent',
+                                                                 '09-Jul-2014 09:21:57 +0000',
+                                                                 'deleted'
+                                                               ],
+                                                        '3' => [
+                                                                 'recent',
+                                                                 'seen',
+                                                                 '09-Jul-2014 09:21:57 +0000',
+                                                                 'deleted'
+                                                               ],
+                                                        '5' => [
+                                                                 '09-Jul-2014 09:21:57 +0000 '
+                                                               ]
+                                                      }
+                                          },
+                               'test' => {
+                                           'uids' => {
+                                                       '11' => [
+                                                                 'recent',
+                                                                 '09-Jul-2014 09:21:57 +0000'
+                                                               ],
+                                                       '10' => [
+                                                                 'recent',
+                                                                 '09-Jul-2014 09:21:57 +0000'
+                                                               ]
+                                                     }
+                                         },
+                               'Sent' => {
+                                           'flags' => [
+                                                        'Sent'
+                                                      ],
+                                           'uids' => {
+                                                       '1' => [
+                                                                'recent',
+                                                                '09-Jul-2014 09:21:57 +0000'
+                                                              ]
+                                                     }
+                                         }
+                             },
+                             {
+                               'INBOX' => {
+                                            'uidvalidity' => '13123',
+                                            'flags' => [
+                                                         'Inbox'
+                                                       ],
+                                            'uids' => {
+                                                        '1' => [
+                                                                 'seen',
+                                                                 'answered',
+                                                                 '09-Jul-2014 09:21:57 +0000'
+                                                               ],
+                                                        '3' => [
+                                                                 'seen',
+                                                                 'answered',
+                                                                 '09-Jul-2014 09:21:57 +0000'
+                                                               ]
+                                                      }
+                                          }
+                             }
+                           ],
+                 'imap' => {
+                             'capability' => [
+                                               '* CAPABILITY FAKE IMAP',
+                                               '* CAPABILITY ID XLIST UIDPLUS UNSELECT MOVE',
+                                               'OK CAPABILITY completed'
+                                             ],
+                             'login' => [
+                                          '* CAPABILITY IMAP ID XLIST UIDPLUS UNSELECT MOVE',
+                                          'OK Authentication successful'
+                                        ]
+                           },
+                 'state' => 0,
+                 'client' => undef,
+                 'selected_folder' => '',
+                 'fetch_num' => {},
+                 'init_params' => {
+                                    'test' => 'tests/test0',
+                                    'test_dir' => 'tests',
+                                    'flags' => '662',
+                                    'mode' => 'config',
+                                    'useremail' => 'ksd001@mail.ru',
+                                    'ping_retries' => '20',
+                                    'port' => '8877',
+                                    'log_file' => './mylog.log',
+                                    'message' => 'message.eml',
+                                    'host' => 'localhost',
+                                    'email' => 'fake_remote_email@domain.com',
+                                    'password' => '123456',
+                                    'pid_file' => '/tmp/fake_imap_server.pid',
+                                    'log_level' => '3',
+                                    'config' => './/config.conf',
+                                    'exec' => '../BUILD/collector --log=imap'
+                                  },
+                 'test_amount' => '2',
+                 'server' => undef,
+                 'logger' => bless( {
+                                      'is_OFF' => sub { "DUMMY" },
+                                      'is_DEBUG' => sub { "DUMMY" },
+                                      'ERROR' => sub { "DUMMY" },
+                                      'is_INFO' => sub { "DUMMY" },
+                                      'layout' => undef,
+                                      'category' => 'fake_imap_server',
+                                      'is_TRACE' => sub { "DUMMY" },
+                                      'DEBUG' => $VAR1->{'logger'}{'ERROR'},
+                                      'is_ALL' => sub { "DUMMY" },
+                                      'additivity' => 1,
+                                      'TRACE' => sub { "DUMMY" },
+                                      'ALL' => $VAR1->{'logger'}{'TRACE'},
+                                      'is_FATAL' => sub { "DUMMY" },
+                                      'is_WARN' => sub { "DUMMY" },
+                                      'FATAL' => $VAR1->{'logger'}{'ERROR'},
+                                      'appender_names' => [],
+                                      'WARN' => $VAR1->{'logger'}{'ERROR'},
+                                      'INFO' => $VAR1->{'logger'}{'ERROR'},
+                                      'level' => undef,
+                                      'num_appenders' => 0,
+                                      'OFF' => $VAR1->{'logger'}{'ERROR'},
+                                      'is_ERROR' => sub { "DUMMY" }
+                                    }, 'Log::Log4perl::Logger' )
+               }, 'fake_imap_server' );
+2014/12/05 08:59:56 CONNECTION NUMBER =>0
+2014/12/05 08:59:56 client connected to pid 18656
+2014/12/05 08:59:56 >>>: OK Fake Imap Server is working hard
+2014/12/05 08:59:57 $VAR1 = bless( {
+                 'is_read_only' => 0,
+                 'connection_number' => -1,
+                 'test' => [
+                             {
+                               'INBOX' => {
+                                            'uidvalidity' => '13123',
+                                            'flags' => [
+                                                         'hashnochildren',
+                                                         'noselect',
+                                                         'Inbox'
+                                                       ],
+                                            'uids' => {
+                                                        '1' => [
+                                                                 'seen',
+                                                                 'recent',
+                                                                 '09-Jul-2014 09:21:57 +0000',
+                                                                 'deleted'
+                                                               ],
+                                                        '3' => [
+                                                                 'recent',
+                                                                 'seen',
+                                                                 '09-Jul-2014 09:21:57 +0000',
+                                                                 'deleted'
+                                                               ],
+                                                        '5' => [
+                                                                 '09-Jul-2014 09:21:57 +0000 '
+                                                               ]
+                                                      }
+                                          },
+                               'test' => {
+                                           'uids' => {
+                                                       '11' => [
+                                                                 'recent',
+                                                                 '09-Jul-2014 09:21:57 +0000'
+                                                               ],
+                                                       '10' => [
+                                                                 'recent',
+                                                                 '09-Jul-2014 09:21:57 +0000'
+                                                               ]
+                                                     }
+                                         },
+                               'Sent' => {
+                                           'flags' => [
+                                                        'Sent'
+                                                      ],
+                                           'uids' => {
+                                                       '1' => [
+                                                                'recent',
+                                                                '09-Jul-2014 09:21:57 +0000'
+                                                              ]
+                                                     }
+                                         }
+                             },
+                             {
+                               'new_folder' => {
+                                                 'uids' => {
+                                                             '10' => [
+                                                                       '23-Aug-2013 00:00:33 +0000'
+                                                                     ]
+                                                           }
+                                               }
+                             }
+                           ],
+                 'imap' => {
+                             'capability' => [
+                                               '* CAPABILITY FAKE IMAP',
+                                               '* CAPABILITY ID XLIST UIDPLUS UNSELECT MOVE',
+                                               'OK CAPABILITY completed'
+                                             ],
+                             'login' => [
+                                          '* CAPABILITY IMAP ID XLIST UIDPLUS UNSELECT MOVE',
+                                          'OK Authentication successful'
+                                        ]
+                           },
+                 'state' => 0,
+                 'client' => undef,
+                 'selected_folder' => '',
+                 'fetch_num' => {},
+                 'init_params' => {
+                                    'test' => 'tests/test2',
+                                    'test_dir' => 'tests',
+                                    'flags' => '662',
+                                    'mode' => 'config',
+                                    'useremail' => 'ksd001@mail.ru',
+                                    'ping_retries' => '20',
+                                    'port' => '8877',
+                                    'log_file' => './mylog.log',
+                                    'message' => 'message.eml',
+                                    'host' => 'localhost',
+                                    'email' => 'fake_remote_email@domain.com',
+                                    'password' => '123456',
+                                    'pid_file' => '/tmp/fake_imap_server.pid',
+                                    'log_level' => '3',
+                                    'config' => './/config.conf',
+                                    'exec' => '../BUILD/collector --log=imap'
+                                  },
+                 'test_amount' => '2',
+                 'server' => undef,
+                 'logger' => bless( {
+                                      'is_OFF' => sub { "DUMMY" },
+                                      'is_DEBUG' => sub { "DUMMY" },
+                                      'ERROR' => sub { "DUMMY" },
+                                      'is_INFO' => sub { "DUMMY" },
+                                      'layout' => undef,
+                                      'category' => 'fake_imap_server',
+                                      'is_TRACE' => sub { "DUMMY" },
+                                      'DEBUG' => $VAR1->{'logger'}{'ERROR'},
+                                      'is_ALL' => sub { "DUMMY" },
+                                      'additivity' => 1,
+                                      'TRACE' => sub { "DUMMY" },
+                                      'ALL' => $VAR1->{'logger'}{'TRACE'},
+                                      'is_FATAL' => sub { "DUMMY" },
+                                      'is_WARN' => sub { "DUMMY" },
+                                      'FATAL' => $VAR1->{'logger'}{'ERROR'},
+                                      'appender_names' => [],
+                                      'WARN' => $VAR1->{'logger'}{'ERROR'},
+                                      'INFO' => $VAR1->{'logger'}{'ERROR'},
+                                      'level' => undef,
+                                      'num_appenders' => 0,
+                                      'OFF' => $VAR1->{'logger'}{'ERROR'},
+                                      'is_ERROR' => sub { "DUMMY" }
+                                    }, 'Log::Log4perl::Logger' )
+               }, 'fake_imap_server' );
+2014/12/05 08:59:57 CONNECTION NUMBER =>0
+2014/12/05 08:59:57 client connected to pid 18663
+2014/12/05 08:59:57 >>>: OK Fake Imap Server is working hard
