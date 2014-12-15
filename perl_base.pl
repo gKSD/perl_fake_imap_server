@@ -119,12 +119,12 @@ sub do_parse {
         print "\$prev_line: $prev_line, \$is_first: $is_first\n";
         s/\s*//;
 
-        if (/^\{\}$/) {
-            next;
-        }
-        if (/^\[\]$/) {
-            next;
-        }
+        #if (/^\{\}$/) {
+        #    next;
+        #}
+        #if (/^\[\]$/) {
+        #    next;
+        #}
         if (/^\{$/) {
             push @{$brackets}, '}'; #type of expected closing bracket
             print "brackets: ".Dumper(@{$brackets})."\n";
@@ -142,6 +142,10 @@ sub do_parse {
                     }
                     elsif ($prev_line =~ /^\"(.*)\"$/) {
                         push @{$it}, $1;
+                    }
+                    elsif ($prev_line =~ /^\s*\{\s*\}\s*\,?\s*$/) {
+                        my %hash = ();
+                        push @{$it}, \%hash;
                     }
                     else{
                         $prev_line =~ s/\s+$//g;
@@ -180,6 +184,10 @@ sub do_parse {
                     }
                     elsif ($prev_line =~ /^\"(.*)\"$/) {
                         push @{$it}, $1;
+                    }
+                    elsif ($prev_line =~ /^\s*\{\s*\}\s*\,?\s*$/) {
+                        my %hash = ();
+                        push @{$it}, \%hash;
                     }
                     else{
                         $prev_line =~ s/\s+$//g;
@@ -221,6 +229,10 @@ sub do_parse {
                 elsif ($prev_line =~ /^\"(.*)\"$/) {
                     push @{$it}, $1;
                 }
+                elsif ($prev_line =~ /^\s*\{\s*\}\s*\,?\s*$/) {
+                    my %hash = ();
+                    push @{$it}, \%hash;
+                }
                 else{
                     $prev_line =~ s/\s+$//g;
                     if ($prev_line =~ /[\:\,\;\-\=]$/) { chop $prev_line;}
@@ -251,7 +263,7 @@ sub do_parse {
         if ($is_first) {
             $prev_line = $_;
             $is_first = 0;
-            print "LINE is **$_**\n";
+            print "LINE is **$_**, is_first = $is_first\n";
             if (/^(\w+)[:]?\s*[\(\[]\s*([^\f\n\r\t\v]*)[\]\)]\,?\s*$/) {
                 my $key = $1;
                 my $value = $2;
@@ -265,20 +277,41 @@ sub do_parse {
                 $is_first = 1;
             }
             elsif (/^(\w+)[:]?\s*\{\s*\}\s*$/) {
-                $it->{$1} = "";
+                #$it->{$1} = "";
+                %{$it->{$1}} = ();
                 $is_first = 1;
             }
-            elsif (/^(\w+)[:]?\s*\{\s*([\s\,\w\(\),\:,\=,\>]*)\}\,?\s*$/) {
+            elsif (/^(\w+)\s*\:?\s*\{(.*)\}\,?\s*$/) {
+                print "Is HASHES IN ONE LINE";
+                my ($hkey, $hvalue) = ($1, $2);
+                my @ar = split (/, */, $hvalue);
+                print "ar => ".Dumper(\@ar)."\n";
+                %{$it->{$prev_line}} = ();
+                #print "it {} before: ".Dumper($it)."\n";
+                foreach my $item (@ar) {
+                    if (do_parse($item, \%{$it->{$prev_line}}, 0, $brackets) <= 0) {return -1;}
+                }
+                $is_first = 1;
+            }
+            elsif (/^(\w+)\s*[:]?\s*\{\s*([\s\,\w\(\),\:,\=,\>]*)\}\,?\s*$/) {
                 print "unsupported type of hash, check your config\n";
                 return -1;
             }
-            elsif (/(.*):\s*$/) {
+            elsif (/(.+):\s*$/) {
                 $prev_line = $1;
             }
-            elsif (/^(\w+)\s*\:\"?\s*(\S+)\s*\"?\s*\,?$/) {
+            elsif (/^(\w+)\s*\:\s*(\S+)\s*\,?$/) {
                 $it->{$1} = $2;
-                print "it {} after little push: ".Dumper($it)."\n";
+                print "it {} after little push WITHOUT QOUTES: ".Dumper($it)."\n";
                 $is_first = 1;
+            }
+            elsif (/^(\w+)\s*\:\s*\"(.*)\"\s*\,?\s*$/) {
+                $it->{$1} = $2;
+                print "it {} after little push WITH QOUTES : ".Dumper($it)."\n";
+                $is_first = 1;
+            }
+            elsif (!$is_ar and /^\s*\[/) {
+                return -1;
             }
             elsif (/^\s*\[\s*([^\f\n\r\t\v]*)\s*\]\,?\s*$/) {
                 print "OMNOOMNOOMNO\n";
@@ -291,9 +324,9 @@ sub do_parse {
                 push @{$it}, \@ar;
                 $is_first = 1;
             }
-            elsif (!$is_ar and /^\s*\[/) {
-                return -1;
-            }
+            #elsif (/^\s*\{\s*\}/) {
+            #    if ($is_ar) {return -1;}
+            #}
 
             ### TODO обработать первый элемент, все равно массива или хэша вида a:1, при этом $is_first снова станет равным 1
         } else {
@@ -311,6 +344,10 @@ sub do_parse {
                 elsif ($prev_line =~ /^\"(.*)\"$/) {
                     push @{$it}, $1;
                 }
+                elsif ($prev_line =~ /^\s*\{\s*\}\s*\,?\s*$/) {
+                    my %hash = ();
+                    push @{$it}, \%hash;
+                }
                 else{
                     $prev_line =~ s/\s+$//g;
                     if ($prev_line =~ /[\:\,\;\-\=]$/) { chop $prev_line;}
@@ -318,8 +355,16 @@ sub do_parse {
                 }
                 $prev_line = $_;
             } else {
-                print "000 Syntax error in config, check {} or [] brackets, ".Dumper(@{$brackets})."\n"; 
-                return -1;
+                print "WOW => $_\n";
+                if (/^\s*\{\s*\}/) {
+                    print "IS EMPTY LINE!!\n";
+                    %{$it->{$prev_line}} = ();
+                    $is_first = 1;
+                }
+                else {
+                    print "000 Syntax error in config, check {} or [] brackets, ".Dumper(@{$brackets})."\n"; 
+                    return -1;
+                }
             }
         }
     }
@@ -355,12 +400,12 @@ sub parse_test_file1 {
     }
 
     $fh->close();
-    print Dumper(%glhash);
+    print "Parser result => ".Dumper(%glhash);
 }
 
 
 #parse_test_file("tests/test3");
-parse_test_file1("tests/test2");
+parse_test_file1("tests/test5");
 
 
 sub func2 {
@@ -384,4 +429,55 @@ func1();
 
 my $it = 1<<9;
 warn "ITTTTT $it\n";
+
+my $dur = 1000;
+my $note = 23;
+my $mult = 10;
+my $sound=$note*$mult;
+my $note = "\x1b[31mTest\x1b[0m";
+print "111";
+print $note;
+
+
+my $str = "qwe: \"aaa bbb ccc ddd\"";
+my %hash;
+if ($str =~ /(.*): \"(.*)\"/) {
+     %hash = ( $1 => $2);
+}
+print Dumper(\%hash);
+my %hash1;
+if ($str =~ /^(\w+)\s*\:\s*\"(.*)\"\s*\,?/)
+{
+    %hash1 = ($1 => $2);
+}
+print Dumper(\%hash1);
+
+
+
 1;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
