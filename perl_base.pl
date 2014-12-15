@@ -101,23 +101,44 @@ print "123";
     print "TEST end\n";
 ### TESTTTTTTTTTTTTTTT
 
-
 sub do_parse {
     my $fh = shift; #указатель на файл
     my $it = shift; # ссылка на предыдущую структуру
     my $is_ar = shift; # тип предыдущей структуры - хэш или массив
     my $brackets = shift; #ссылка на массив со скобками
 
-    print "FUNCTION do_parse,".Dumper($it)."\n";
-
+    print "DO PARSE FUNCTION\n";
+    
     my $prev_line = "";
     my $is_first = 1;
 
     while (<$fh>) {
         chomp $_;
-        print "line $_\n";
+        print "*******************************************************************line $_\n";
         print "\$prev_line: $prev_line, \$is_first: $is_first\n";
         s/\s*//;
+        my $prev_line_href = \$prev_line;
+        my $is_first_href = \$is_first;
+        if(process_line($fh, $_, $it, $is_ar, $brackets, $prev_line_href, $is_first_href) <= 0) {return -1;}
+    }
+    return 1;
+}
+
+
+sub process_line {
+    my $fh = shift; #указатель на файл
+    my $line = shift; #парсим эту строку
+    my $it = shift; # ссылка на предыдущую структуру
+    my $is_ar = shift; # тип предыдущей структуры - хэш или массив
+    my $brackets = shift; #ссылка на массив со скобками
+    my $prev_line = shift;
+    my $is_first = shift;
+
+    print "FUNCTION do_parse,".Dumper($it)."\n";
+    print "line => $line, prev_line => $$prev_line, is_first => $$is_first\n";
+
+
+    $line =~ s/\s*//;
 
         #if (/^\{\}$/) {
         #    next;
@@ -125,12 +146,12 @@ sub do_parse {
         #if (/^\[\]$/) {
         #    next;
         #}
-        if (/^\{$/) {
+        if ($line =~ /^\{$/) {
             push @{$brackets}, '}'; #type of expected closing bracket
             print "brackets: ".Dumper(@{$brackets})."\n";
             if ($is_ar) {
-                if (!$is_first) {
-                    if ($prev_line =~ /^\s*\[\s*([^\f\n\r\t\v]*)\s*\]\,?\s*$/) {
+                if (!$$is_first) {
+                    if ($$prev_line =~ /^\s*\[\s*([^\f\n\r\t\v]*)\s*\]\,?\s*$/) {
                         my $value = $1;
                         my @ar = split (/, */, $value);
                         my $n = $#ar + 1;
@@ -138,19 +159,19 @@ sub do_parse {
                             if ($ar[$i] =~ /^\"(.*)\"$/) {$ar[$i] = $1;}
                         }
                         push @{$it}, \@ar;
-                        $is_first = 1;
+                        $$is_first = 1;
                     }
-                    elsif ($prev_line =~ /^\"(.*)\"$/) {
+                    elsif ($$prev_line =~ /^\"(.*)\"$/) {
                         push @{$it}, $1;
                     }
-                    elsif ($prev_line =~ /^\s*\{\s*\}\s*\,?\s*$/) {
+                    elsif ($$prev_line =~ /^\s*\{\s*\}\s*\,?\s*$/) {
                         my %hash = ();
                         push @{$it}, \%hash;
                     }
                     else{
-                        $prev_line =~ s/\s+$//g;
-                        if ($prev_line =~ /[\:\,\;\-\=]$/) { chop $prev_line;}
-                        push @{$it}, $prev_line;
+                        $$prev_line =~ s/\s+$//g;
+                        if ($$prev_line =~ /[\:\,\;\-\=]$/) { chop $$prev_line;}
+                        push @{$it}, $$prev_line;
                     }
                 }
                 my %hash;
@@ -158,21 +179,21 @@ sub do_parse {
                 if (do_parse($fh, \%{$it->[-1]}, 0, $brackets) <= 0) {return -1;}
             }
             else {
-                %{$it->{$prev_line}} = ();
+                %{$it->{$$prev_line}} = ();
                 print "it {} before: ".Dumper($it)."\n";
-                if (do_parse($fh, \%{$it->{$prev_line}}, 0, $brackets) <= 0) {return -1;}
+                if (do_parse($fh, \%{$it->{$$prev_line}}, 0, $brackets) <= 0) {return -1;}
             }
             print "it {} after: ".Dumper($it)."\n";
-            $is_first = 1;
+            $$is_first = 1;
             next;
         }
-        if (/^\[$/) {
+        if ($line =~ /^\[$/) {
             push @{$brackets}, ']';
             print "brackets: ".Dumper(@{$brackets})."\n";
-            if (!$is_ar and $is_first) {return -1;}
+            if (!$is_ar and $$is_first) {return -1;}
             if ($is_ar) {
-                if (!$is_first) {
-                    if ($prev_line =~ /^\s*\[\s*([^\f\n\r\t\v]*)\s*\]\,?\s*$/) {
+                if (!$$is_first) {
+                    if ($$prev_line =~ /^\s*\[\s*([^\f\n\r\t\v]*)\s*\]\,?\s*$/) {
                         my $value = $1;
                         my @ar = split (/, */, $value);
                         my $n = $#ar + 1;
@@ -180,19 +201,19 @@ sub do_parse {
                             if ($ar[$i] =~ /^\"(.*)\"$/) {$ar[$i] = $1;}
                         }
                         push @{$it}, \@ar;
-                        $is_first = 1;
+                        $$is_first = 1;
                     }
-                    elsif ($prev_line =~ /^\"(.*)\"$/) {
+                    elsif ($$prev_line =~ /^\"(.*)\"$/) {
                         push @{$it}, $1;
                     }
-                    elsif ($prev_line =~ /^\s*\{\s*\}\s*\,?\s*$/) {
+                    elsif ($$prev_line =~ /^\s*\{\s*\}\s*\,?\s*$/) {
                         my %hash = ();
                         push @{$it}, \%hash;
                     }
                     else{
-                        $prev_line =~ s/\s+$//g;
-                        if ($prev_line =~ /[\:\,\;\-\=]$/) { chop $prev_line;}
-                        push @{$it}, $prev_line;
+                        $$prev_line =~ s/\s+$//g;
+                        if ($$prev_line =~ /[\:\,\;\-\=]$/) { chop $$prev_line;}
+                        push @{$it}, $$prev_line;
                     }
                     #push @{$it}, $prev_line;
                 }
@@ -201,22 +222,23 @@ sub do_parse {
                 if (do_parse($fh, \@{$it->[-1]}, 1, $brackets) <= 0) {return -1;}
             }
             else {
-                @{$it->{$prev_line}} = ();
+                @{$it->{$$prev_line}} = ();
                 print "it [] before: ".Dumper($it)."\n";
-                if (do_parse($fh, \@{$it->{$prev_line}}, 1, $brackets) <= 0) {return -1;}
+                if (do_parse($fh, \@{$it->{$$prev_line}}, 1, $brackets) <= 0) {return -1;}
             }
             print "it {} after: ".Dumper($it)."\n";
-            $is_first = 1;
+            $$is_first = 1;
             next;
         } 
-        if (/^\]/) {
+        if ($line =~ /^\]/) {
+            print "closing ] brancket\n";
             my $last = pop @{$brackets};
             unless ($last eq ']') {
                 print "123 Syntax error in config, check ] brackets, ".Dumper(@{$brackets})."\n";
                 return -1;
             }
-            if (!$is_first) {
-                if ($prev_line =~ /^\s*\[\s*([^\f\n\r\t\v]*)\s*\]\,?\s*$/) {
+            if (!$$is_first) {
+                if ($$prev_line =~ /^\s*\[\s*([^\f\n\r\t\v]*)\s*\]\,?\s*$/) {
                     my $value = $1;
                     my @ar = split (/, */, $value);
                     my $n = $#ar + 1;
@@ -224,31 +246,31 @@ sub do_parse {
                         if ($ar[$i] =~ /^\"(.*)\"$/) {$ar[$i] = $1;}
                     }
                     push @{$it}, \@ar;
-                    $is_first = 1;
+                    $$is_first = 1;
                 }
-                elsif ($prev_line =~ /^\"(.*)\"$/) {
+                elsif ($$prev_line =~ /^\"(.*)\"$/) {
                     push @{$it}, $1;
                 }
-                elsif ($prev_line =~ /^\s*\{\s*\}\s*\,?\s*$/) {
+                elsif ($$prev_line =~ /^\s*\{\s*\}\s*\,?\s*$/) {
                     my %hash = ();
                     push @{$it}, \%hash;
                 }
                 else{
-                    $prev_line =~ s/\s+$//g;
-                    if ($prev_line =~ /[\:\,\;\-\=]$/) { chop $prev_line;}
-                    push @{$it}, $prev_line;
+                    $$prev_line =~ s/\s+$//g;
+                    if ($$prev_line =~ /[\:\,\;\-\=]$/) { chop $$prev_line;}
+                    push @{$it}, $$prev_line;
                 }
                 #push @{$it}, $prev_line;
             }
             return 1;
         }
-        if (/^\}/) {
+        if ($line =~ /^\}/) {
             my $last = pop @{$brackets};
             unless ($last eq '}') {
                 print "456 Syntax error in config, check } brackets, ".Dumper(@{$brackets})."\n";
                 return -1;
             }
-            if ($is_first) {
+            if ($$is_first) {
                 return 1;
             } else {
                 print "789 Syntax error in config, check {} or [] brackets, ".Dumper(@{$brackets})."\n";
@@ -257,14 +279,14 @@ sub do_parse {
             next;
         }
 
-        if (/^$/) {next;}
-        if (/^\#/) {next;}
+        if ($line =~ /^$/) {next;}
+        if ($line =~ /^\#/) {next;}
 
-        if ($is_first) {
-            $prev_line = $_;
-            $is_first = 0;
-            print "LINE is **$_**, is_first = $is_first\n";
-            if (/^(\w+)[:]?\s*[\(\[]\s*([^\f\n\r\t\v]*)[\]\)]\,?\s*$/) {
+        if ($$is_first) {
+            $$prev_line = $line;
+            $$is_first = 0;
+            print "LINE is **$line**, is_first = $$is_first\n";
+            if ($line =~ /^(\w+)[:]?\s*[\(\[]\s*([^\f\n\r\t\v]*)[\]\)]\,?\s*$/) {
                 my $key = $1;
                 my $value = $2;
                 my @ar = split (/, */, $value);
@@ -274,46 +296,47 @@ sub do_parse {
                 }
                 @{$it->{$key}} = @ar;
                 print "it {} after little push: ".Dumper($it)."\n";
-                $is_first = 1;
+                $$is_first = 1;
             }
-            elsif (/^(\w+)[:]?\s*\{\s*\}\s*$/) {
+            elsif ($line =~ /^(\w+)[:]?\s*\{\s*\}\s*$/) {
                 #$it->{$1} = "";
                 %{$it->{$1}} = ();
-                $is_first = 1;
+                $$is_first = 1;
             }
-            elsif (/^(\w+)\s*\:?\s*\{(.*)\}\,?\s*$/) {
+            elsif ($line =~ /^(\w+)\s*\:?\s*\{(.*)\}\,?\s*$/) {
                 print "Is HASHES IN ONE LINE";
                 my ($hkey, $hvalue) = ($1, $2);
                 my @ar = split (/, */, $hvalue);
                 print "ar => ".Dumper(\@ar)."\n";
-                %{$it->{$prev_line}} = ();
+                %{$it->{$$prev_line}} = ();
                 #print "it {} before: ".Dumper($it)."\n";
                 foreach my $item (@ar) {
-                    if (do_parse($item, \%{$it->{$prev_line}}, 0, $brackets) <= 0) {return -1;}
+                    #if (do_parse($item, \%{$it->{$prev_line}}, 0, $brackets) <= 0) {return -1;}
+                    if (process_line($fh, $item, \%{$it->{$$prev_line}}, 0, $brackets, $prev_line, $is_first) <= 0) {return -1;};
                 }
-                $is_first = 1;
+                $$is_first = 1;
             }
-            elsif (/^(\w+)\s*[:]?\s*\{\s*([\s\,\w\(\),\:,\=,\>]*)\}\,?\s*$/) {
+            elsif ($line =~ /^(\w+)\s*[:]?\s*\{\s*([\s\,\w\(\),\:,\=,\>]*)\}\,?\s*$/) {
                 print "unsupported type of hash, check your config\n";
                 return -1;
             }
-            elsif (/(.+):\s*$/) {
-                $prev_line = $1;
+            elsif ($line =~ /(.+):\s*$/) {
+                $$prev_line = $1;
             }
-            elsif (/^(\w+)\s*\:\s*(\S+)\s*\,?$/) {
+            elsif ($line =~ /^(\w+)\s*\:\s*(\S+)\s*\,?$/) {
                 $it->{$1} = $2;
                 print "it {} after little push WITHOUT QOUTES: ".Dumper($it)."\n";
-                $is_first = 1;
+                $$is_first = 1;
             }
-            elsif (/^(\w+)\s*\:\s*\"(.*)\"\s*\,?\s*$/) {
+            elsif ($line =~ /^(\w+)\s*\:\s*\"(.*)\"\s*\,?\s*$/) {
                 $it->{$1} = $2;
                 print "it {} after little push WITH QOUTES : ".Dumper($it)."\n";
-                $is_first = 1;
+                $$is_first = 1;
             }
-            elsif (!$is_ar and /^\s*\[/) {
+            elsif (!$is_ar and $line =~ /^\s*\[/) {
                 return -1;
             }
-            elsif (/^\s*\[\s*([^\f\n\r\t\v]*)\s*\]\,?\s*$/) {
+            elsif ($line =~ /^\s*\[\s*([^\f\n\r\t\v]*)\s*\]\,?\s*$/) {
                 print "OMNOOMNOOMNO\n";
                 my $value = $1;
                 my @ar = split (/, */, $value);
@@ -322,7 +345,7 @@ sub do_parse {
                     if ($ar[$i] =~ /^\"(.*)\"$/) {$ar[$i] = $1;}
                 }
                 push @{$it}, \@ar;
-                $is_first = 1;
+                $$is_first = 1;
             }
             #elsif (/^\s*\{\s*\}/) {
             #    if ($is_ar) {return -1;}
@@ -331,7 +354,7 @@ sub do_parse {
             ### TODO обработать первый элемент, все равно массива или хэша вида a:1, при этом $is_first снова станет равным 1
         } else {
             if ($is_ar) {
-                if ($prev_line =~ /^\s*\[\s*([^\f\n\r\t\v]*)\s*\]\,?\s*$/) {
+                if ($$prev_line =~ /^\s*\[\s*([^\f\n\r\t\v]*)\s*\]\,?\s*$/) {
                     my $value = $1;
                     my @ar = split (/, */, $value);
                     my $n = $#ar + 1;
@@ -339,27 +362,27 @@ sub do_parse {
                         if ($ar[$i] =~ /^\"(.*)\"$/) {$ar[$i] = $1;}
                     }
                     push @{$it}, \@ar;
-                    $is_first = 1;
+                    $$is_first = 1;
                 }
-                elsif ($prev_line =~ /^\"(.*)\"$/) {
+                elsif ($$prev_line =~ /^\"(.*)\"$/) {
                     push @{$it}, $1;
                 }
-                elsif ($prev_line =~ /^\s*\{\s*\}\s*\,?\s*$/) {
+                elsif ($$prev_line =~ /^\s*\{\s*\}\s*\,?\s*$/) {
                     my %hash = ();
                     push @{$it}, \%hash;
                 }
                 else{
-                    $prev_line =~ s/\s+$//g;
-                    if ($prev_line =~ /[\:\,\;\-\=]$/) { chop $prev_line;}
-                    push @{$it}, $prev_line;
+                    $$prev_line =~ s/\s+$//g;
+                    if ($$prev_line =~ /[\:\,\;\-\=]$/) { chop $$prev_line;}
+                    push @{$it}, $$prev_line;
                 }
-                $prev_line = $_;
+                $$prev_line = $line;
             } else {
-                print "WOW => $_\n";
+                print "WOW => $line\n";
                 if (/^\s*\{\s*\}/) {
                     print "IS EMPTY LINE!!\n";
-                    %{$it->{$prev_line}} = ();
-                    $is_first = 1;
+                    %{$it->{$$prev_line}} = ();
+                    $$is_first = 1;
                 }
                 else {
                     print "000 Syntax error in config, check {} or [] brackets, ".Dumper(@{$brackets})."\n"; 
@@ -367,7 +390,6 @@ sub do_parse {
                 }
             }
         }
-    }
     return 1;
 }
 
@@ -405,7 +427,7 @@ sub parse_test_file1 {
 
 
 #parse_test_file("tests/test3");
-parse_test_file1("tests/test5");
+parse_test_file1("tests/test2");
 
 
 sub func2 {
